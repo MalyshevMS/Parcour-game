@@ -13,3 +13,6 @@ set(GLFW_INSTALL OFF BOOL "")
 
 add_subdirectory(external/glfw)
 target_link_libraries(${project_name_} glfw)
+
+add_subdirectory(external/glad)
+target_link_libraries(${project_name_} glad)
