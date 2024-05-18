@@ -1,44 +1,59 @@
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
+#include "Renderer/ShaderProgram.hpp"
 
 #include <iostream> // other libs
+#include <string>
 
-int sizeX = 640, sizeY = 480;
+GLfloat point[] = {
+     0.0f,  0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+    -0.5f, -0.5f, 0.0f
+};
 
-void sizeHandler(GLFWwindow* win, int width, int heght) {
-    sizeX = width;
-    sizeY = heght;
-    glViewport(0, 0, width, heght);
+GLfloat colors[] = {
+    1.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 1.0f
+};
+
+const char* vertex_shader =
+"#version 460\n"
+"layout(location = 0) in vec3 vertex_position;"
+"layout(location = 1) in vec3 vertex_color;"
+"out vec3 color;"
+"void main() {"
+"   color = vertex_color;"
+"   gl_Position = vec4(vertex_position, 1.0);"
+"}";
+
+const char* fragment_shader =
+"#version 460\n"
+"in vec3 color;"
+"out vec4 frag_color;"
+"void main() {"
+"   frag_color = vec4(color, 1.0);"
+"}";
+
+
+int SizeX = 640;
+int SizeY = 480;
+
+void sizeHandler(GLFWwindow* win, int width, int height) {
+    SizeX = width;
+    SizeY = height;
+    glViewport(0, 0, SizeX, SizeY);
 }
 
 void keyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
-    if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-        std::cout << "Move forward" << std::endl;
-    }
-
-    if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-        std::cout << "Move backward" << std::endl;
-    }
-
-    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        std::cout << "Strafe left" << std::endl;
-    }
-
-    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-        std::cout << "Strafe right" << std::endl;
-    }
-
     if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_GRAVE_ACCENT) && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(win, GL_TRUE);
     }
 }
 
 int main(void) {
-    GLFWwindow* window1;
-    GLFWwindow* window2;
-
     if (!glfwInit()) {
-        std::cerr << "GLFW initialization failed!" << std::endl;
+        std::cerr << "glfwInit failed!" << std::endl;
         return -1;
     }
 
@@ -46,34 +61,67 @@ int main(void) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window1 = glfwCreateWindow(sizeX, sizeY, "M2 engine handler", NULL, NULL);
-    if (!window1) {
-        std::cerr << "Failed to create window!";
+    GLFWwindow* window = glfwCreateWindow(SizeX, SizeY, "M2 Engine", nullptr, nullptr);
+    if (!window) {
+        std::cerr << "glfwCreateWindow failed!" << std::endl;
         glfwTerminate();
         return -1;
     }
 
-    glfwSetWindowSizeCallback(window1, sizeHandler);
-    glfwSetKeyCallback(window1, keyHandler);
+    glfwSetWindowSizeCallback(window, sizeHandler);
+    glfwSetKeyCallback(window, keyHandler);
 
-    glfwMakeContextCurrent(window1);
+    glfwMakeContextCurrent(window);
 
     if (!gladLoadGL()) {
-        std::cerr << "Can't initialize GLAD!" << std::endl;
-        return -1;
+        std::cerr << "Can't load GLAD!" << std::endl;
     }
 
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
 
-    glClearColor(1, 1, 1, 1);
+    glClearColor(1, 1, 0, 1);
 
-    while (!glfwWindowShouldClose(window1)) {
+    std::string vs(vertex_shader);
+    std::string fs(fragment_shader);
+    Renderer::ShaderProgram shader_program(vs, fs);
+    if (!shader_program.isCompiled()) {
+        std::cerr << "Can't create shader programm!" << std::endl;
+        return -1;
+    }
+
+
+    GLuint points_vbo = 0;
+    glGenBuffers(1, &points_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(point), point, GL_STATIC_DRAW);
+
+    GLuint colors_vbo = 0;
+    glGenBuffers(1, &colors_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+
+    GLuint vao = 0;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
 
+        shader_program.use();
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
 
-        glfwSwapBuffers(window1);
+        glfwSwapBuffers(window);
         glfwPollEvents();
     }
 

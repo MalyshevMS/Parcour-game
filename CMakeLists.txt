@@ -4,7 +4,11 @@ set(project_name_ M2_engine)
 
 project(${project_name_})
 
-add_executable(${project_name_} src/main.cpp)
+set(CMAKE_CXX_STANDARD 17)
+add_executable(${project_name_} 
+    src/main.cpp
+    src/Renderer/ShaderProgram.hpp
+)
 
 set(GLFW_BUILD_DOCS OFF BOOL "")
 set(GLFW_BUILD_TESTS OFF BOOL "")
