@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29 FATAL_ERROR)
 
-set(project_name_ FirstOpenGL)
+set(project_name_ M2_engine)
 
 project(${project_name_})
 
