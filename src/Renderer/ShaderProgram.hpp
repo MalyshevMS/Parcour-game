@@ -87,6 +87,8 @@ namespace Renderer {
 
             Shader_Program.m_ID = 0;
             Shader_Program.m_isCompiled = false;
+
+            return *this;
         };
 
         ShaderProgram(ShaderProgram&& Shader_Program) noexcept {
