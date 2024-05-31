@@ -1,5 +1,8 @@
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
+#include <glm/vec2.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "Renderer/ShaderProgram.hpp" // my libs
 #include "Renderer/Texture2D.hpp"
@@ -9,9 +12,9 @@
 #include <string>
 
 GLfloat point[] = {
-     0.0f,  0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-    -0.5f, -0.5f, 0.0f
+     0,  100, 0,
+     0, 0, 0,
+    -100, 0, 0
 };
 
 GLfloat colors[] = {
@@ -21,18 +24,17 @@ GLfloat colors[] = {
 };
 
 GLfloat texCoord[] = {
-    0.5f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 0.0f
+    0.5f, 1.f,
+    1.f, 0.f,
+    0.f, 0.f
 };
 
-int SizeX = 640;
-int SizeY = 480;
+glm::ivec2 Size(640, 480);
 
 void sizeHandler(GLFWwindow* win, int width, int height) {
-    SizeX = width;
-    SizeY = height;
-    glViewport(0, 0, SizeX, SizeY);
+    Size.x = width;
+    Size.y = height;
+    glViewport(0, 0, Size.x, Size.y);
 }
 
 void keyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
@@ -51,7 +53,7 @@ int main(int argc, char* argv[]) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(SizeX, SizeY, "M2 Engine", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "M2 Engine", nullptr, nullptr);
     if (!window) {
         std::cerr << "glfwCreateWindow failed!" << std::endl;
         glfwTerminate();
@@ -120,13 +122,24 @@ int main(int argc, char* argv[]) {
         defaultShaderProgram->use();
         defaultShaderProgram->setInt("tex", 0);
 
+        glm::mat4 projMat = glm::ortho(0.f, static_cast <float> (Size.x), 0.f, static_cast <float> (Size.y), -100.f, 100.f);
+
+        defaultShaderProgram->setMat4("projMat", projMat);
+
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
 
             defaultShaderProgram->use();
             glBindVertexArray(vao);
             tex->bind();
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+
+            for (int i = 0; i < 4; i++) {
+                glm::mat4 modelMat_curr = glm::mat4(1.0f);
+                modelMat_curr =  glm::translate(modelMat_curr, glm::vec3(100.f * (i + 1), 100.f * i, 0.f));
+
+                defaultShaderProgram->setMat4("modelMat", modelMat_curr);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            }
 
 
             glfwSwapBuffers(window);

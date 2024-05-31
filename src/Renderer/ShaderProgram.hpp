@@ -1,6 +1,8 @@
 #pragma once
 
 #include <glad/glad.h>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <string>
 #include <iostream>
 
@@ -78,6 +80,10 @@ namespace Renderer {
 
         void setInt(const std::string& name, const GLint value) {
             glUniform1i(glGetUniformLocation(m_ID, name.c_str()), value);
+        };
+
+        void setMat4(const std::string& name, const glm::mat4& matrix) {
+            glUniformMatrix4fv(glGetUniformLocation(m_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
         };
 
         ShaderProgram() = delete;
