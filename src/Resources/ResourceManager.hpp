@@ -21,16 +21,16 @@ class ResourceManager {
 private:
     typedef std::map <const string, std::shared_ptr <Renderer::ShaderProgram>> ShaderProgramsMap;
     typedef std::map <const string, std::shared_ptr<Renderer::Texture2D>> TexturesMap;
-    ShaderProgramsMap m_shaderPrograms;
-    TexturesMap m_textures;
+    ShaderProgramsMap _shaderPrograms;
+    TexturesMap _textures;
 
-    string m_path;
+    string _path;
 
     string getFileStr(const string& path) const {
         std::ifstream f;
-        f.open(m_path + path, std::ios::in | std::ios::binary);
+        f.open(_path + path, std::ios::in | std::ios::binary);
         if (!f.is_open()) {
-            std::cerr << "Failed to open file " << m_path + path << nl;
+            std::cerr << "Failed to open file " << _path + path << nl;
             return string();
         }
 
@@ -42,7 +42,7 @@ private:
 public:
     ResourceManager(const string& exePath) {
         size_t found = exePath.find_last_of("/\\");
-        this->m_path = exePath.substr(0, found + 1);
+        this->_path = exePath.substr(0, found + 1);
     };
 
     ~ResourceManager() = default;
@@ -64,7 +64,7 @@ public:
             return nullptr;
         }
 
-        std::shared_ptr <Renderer::ShaderProgram>& newShader = m_shaderPrograms.emplace(shaderName, std::make_shared <Renderer::ShaderProgram> (vertexStr, fragmentStr)).first->second;
+        std::shared_ptr <Renderer::ShaderProgram>& newShader = _shaderPrograms.emplace(shaderName, std::make_shared <Renderer::ShaderProgram> (vertexStr, fragmentStr)).first->second;
 
         if (newShader->isCompiled()) {
             return newShader;
@@ -76,9 +76,9 @@ public:
     };
 
     std::shared_ptr <Renderer::ShaderProgram> getShader(const string shaderName) {
-        ShaderProgramsMap::const_iterator it = m_shaderPrograms.find(shaderName);
+        ShaderProgramsMap::const_iterator it = _shaderPrograms.find(shaderName);
 
-        if (it != m_shaderPrograms.end()) {
+        if (it != _shaderPrograms.end()) {
             return it->second;
         }
 
@@ -92,14 +92,14 @@ public:
 
         stbi_set_flip_vertically_on_load(true);
 
-        unsigned char* pixs = stbi_load(string(m_path + "/" + path).c_str(), &width, &height, &channels, 0);
+        unsigned char* pixs = stbi_load(string(_path + "/" + path).c_str(), &width, &height, &channels, 0);
 
         if (!pixs) {
             std::cerr << "Texture Loading Error: " << path << " does not exists" << nl;
             return nullptr;
         }
 
-        std::shared_ptr <Renderer::Texture2D> newTexture = m_textures.emplace(texture, std::make_shared <Renderer::Texture2D> (width, height, pixs, channels, GL_LINEAR, GL_CLAMP_TO_EDGE)).first->second;
+        std::shared_ptr <Renderer::Texture2D> newTexture = _textures.emplace(texture, std::make_shared <Renderer::Texture2D> (width, height, pixs, channels, GL_NEAREST, GL_CLAMP_TO_EDGE)).first->second;
 
         return newTexture;
 
@@ -107,9 +107,9 @@ public:
     };
 
     std::shared_ptr <Renderer::Texture2D> getTexture(const string textureName) {
-        TexturesMap::const_iterator it = m_textures.find(textureName);
+        TexturesMap::const_iterator it = _textures.find(textureName);
 
-        if (it != m_textures.end()) {
+        if (it != _textures.end()) {
             return it->second;
         }
 

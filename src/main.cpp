@@ -24,7 +24,7 @@ GLfloat colors[] = {
 };
 
 GLfloat texCoord[] = {
-    0.5f, 1.f,
+    1.f, 1.f,
     1.f, 0.f,
     0.f, 0.f
 };
@@ -140,7 +140,6 @@ int main(int argc, char* argv[]) {
                 defaultShaderProgram->setMat4("modelMat", modelMat_curr);
                 glDrawArrays(GL_TRIANGLES, 0, 3);
             }
-
 
             glfwSwapBuffers(window);
             glfwPollEvents();

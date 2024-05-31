@@ -29,8 +29,8 @@ namespace Renderer {
             return true;
         };
 
-        bool m_isCompiled = false;
-        GLuint m_ID = 0;
+        bool _isCompiled = false;
+        GLuint _ID = 0;
     public:
         ShaderProgram(const std::string& vertexShader, const std::string& fragmentShader) {
             GLuint vsID;
@@ -44,22 +44,22 @@ namespace Renderer {
                 return;
             }
 
-            m_ID = glCreateProgram();
-            glAttachShader(m_ID, vsID);
-            glAttachShader(m_ID, fsID);
-            glLinkProgram(m_ID);
+            _ID = glCreateProgram();
+            glAttachShader(_ID, vsID);
+            glAttachShader(_ID, fsID);
+            glLinkProgram(_ID);
 
             GLint success;
-            glGetProgramiv(m_ID, GL_LINK_STATUS, &success);
+            glGetProgramiv(_ID, GL_LINK_STATUS, &success);
 
             if (!success) {
                 GLchar infolog[1024];
 
-                glGetShaderInfoLog(m_ID, 1024, nullptr, infolog);
+                glGetShaderInfoLog(_ID, 1024, nullptr, infolog);
 
                 std::cerr << "ERROR::SHADER: LINK error:\n" << infolog << std::endl;
             } else {
-                m_isCompiled = true;
+                _isCompiled = true;
             }
 
             glDeleteShader(vsID);
@@ -67,23 +67,23 @@ namespace Renderer {
         };
 
         ~ShaderProgram() {
-            glDeleteProgram(m_ID);
+            glDeleteProgram(_ID);
         };
 
         bool isCompiled() const {
-            return m_isCompiled;
+            return _isCompiled;
         };
 
         void use() const {
-            glUseProgram(m_ID);
+            glUseProgram(_ID);
         };
 
         void setInt(const std::string& name, const GLint value) {
-            glUniform1i(glGetUniformLocation(m_ID, name.c_str()), value);
+            glUniform1i(glGetUniformLocation(_ID, name.c_str()), value);
         };
 
         void setMat4(const std::string& name, const glm::mat4& matrix) {
-            glUniformMatrix4fv(glGetUniformLocation(m_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
+            glUniformMatrix4fv(glGetUniformLocation(_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
         };
 
         ShaderProgram() = delete;
@@ -91,22 +91,22 @@ namespace Renderer {
         ShaderProgram& operator=(const ShaderProgram&) = delete;
 
         ShaderProgram& operator=(ShaderProgram&& Shader_Program) noexcept {
-            glDeleteProgram(m_ID);
-            m_ID = Shader_Program.m_ID;
-            m_isCompiled = Shader_Program.m_isCompiled;
+            glDeleteProgram(_ID);
+            _ID = Shader_Program._ID;
+            _isCompiled = Shader_Program._isCompiled;
 
-            Shader_Program.m_ID = 0;
-            Shader_Program.m_isCompiled = false;
+            Shader_Program._ID = 0;
+            Shader_Program._isCompiled = false;
 
             return *this;
         };
 
         ShaderProgram(ShaderProgram&& Shader_Program) noexcept {
-            m_ID = Shader_Program.m_ID;
-            m_isCompiled = Shader_Program.m_isCompiled;
+            _ID = Shader_Program._ID;
+            _isCompiled = Shader_Program._isCompiled;
 
-            Shader_Program.m_ID = 0;
-            Shader_Program.m_isCompiled = false;
+            Shader_Program._ID = 0;
+            Shader_Program._isCompiled = false;
         };
     };
 } // namespace Renderer
