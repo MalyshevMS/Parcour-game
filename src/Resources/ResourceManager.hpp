@@ -9,6 +9,7 @@
 
 #include "../Renderer/ShaderProgram.hpp"
 #include "../Renderer/Texture2D.hpp"
+#include "../Renderer/Sprite.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -21,8 +22,11 @@ class ResourceManager {
 private:
     typedef std::map <const string, std::shared_ptr <Renderer::ShaderProgram>> ShaderProgramsMap;
     typedef std::map <const string, std::shared_ptr<Renderer::Texture2D>> TexturesMap;
+    typedef std::map <const string, std::shared_ptr<Renderer::Sprite>> SpritesMap;
+
     ShaderProgramsMap _shaderPrograms;
     TexturesMap _textures;
+    SpritesMap _sprites;
 
     string _path;
 
@@ -46,10 +50,6 @@ public:
     };
 
     ~ResourceManager() = default;
-    ResourceManager(const ResourceManager&) = delete;
-    ResourceManager& operator=(const ResourceManager&) = delete;
-    ResourceManager& operator=(const ResourceManager&&) = delete;
-    ResourceManager(ResourceManager&&) = delete;
 
     std::shared_ptr <Renderer::ShaderProgram> loadShaders(const string& shaderName, const string& vertexPath, const string& fragmentPath) {
         string vertexStr = getFileStr(vertexPath);
@@ -114,6 +114,36 @@ public:
         }
 
         std::cerr << "Can't find the texture: " << textureName << nl;
+
+        return nullptr; 
+    };
+
+    std::shared_ptr <Renderer::Sprite> loadSprite(const string spriteName, const string& texName, const string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
+        auto tex = getTexture(texName);
+
+        if (!tex) {
+            std::cerr << "Can't find the texture: " << texName << " for the sprite" << nl;
+        }
+
+        auto shader = getShader(shaderName);
+
+        if (!shader) {
+            std::cerr << "Can't find the Shader: " << shaderName << " for the sprite" << nl;
+        }
+
+        std::shared_ptr <Renderer::Sprite> newSprite = _sprites.emplace(texName, std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation)).first->second;
+
+        return newSprite;
+    };
+
+    std::shared_ptr <Renderer::Sprite> getSprite(const string spriteName) {
+        SpritesMap::const_iterator it = _sprites.find(spriteName);
+
+        if (it != _sprites.end()) {
+            return it->second;
+        }
+
+        std::cerr << "Can't find the sprite: " << spriteName << nl;
 
         return nullptr; 
     };
