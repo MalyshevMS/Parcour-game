@@ -9,6 +9,7 @@
 #include "Renderer/Texture2D.hpp"
 #include "Renderer/Sprite.hpp"
 #include "Resources/ResourceManager.hpp"
+#include "Resources/TextureLoader.hpp"
 
 #include <iostream> // other libs
 #include <string>
@@ -60,6 +61,7 @@ int main(int argc, char* argv[]) {
 
     {
         ResourceManager resMan(argv[0]);
+        TexLoader textures(&resMan);
 
         auto defaultShaderProgram = resMan.loadShaders("Default", "res/shaders/vertex.cfg", "res/shaders/fragment.cfg");
 
@@ -75,7 +77,8 @@ int main(int argc, char* argv[]) {
             return -1;
         }
 
-        auto tex = resMan.loadTexture("Texture001", "res/textures/texture001.png");
+        textures.add_texture("Texture001", "res/textures/texture001.png");
+        textures.add_texture("Texture002", "res/textures/texture002.png");
 
         defaultShaderProgram->use();
         defaultShaderProgram->setInt("tex", 0);
@@ -91,12 +94,17 @@ int main(int argc, char* argv[]) {
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
             defaultShaderProgram->use();
-            tex->bind();
+            textures.bind_all();
             for (int i = 0; i < 3; i++) {
-                auto sprite_curr = resMan.loadSprite("NewSprite", "Texture001", "SpriteShader", 100, 100, 45.f);
-                sprite_curr->setPos(glm::vec2(i * 100, i * 100));
+                auto sprite_curr_1 = resMan.loadSprite("NewSprite_1", "Texture001", "SpriteShader", 100, 100, 0.f);
+                sprite_curr_1->setPos(glm::vec2(i * 100, i * 100));
 
-                sprite_curr->render();
+                sprite_curr_1->render();
+
+                auto sprite_curr_2 = resMan.loadSprite("NewSprite_2", "Texture002", "SpriteShader", 100, 100, 0.f);
+                sprite_curr_2->setPos(glm::vec2(i, i * 100 + 100));
+
+                sprite_curr_2->render();
             }
 
             glfwSwapBuffers(window);
