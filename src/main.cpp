@@ -10,11 +10,18 @@
 #include "Renderer/Sprite.hpp"
 #include "Resources/ResourceManager.hpp"
 #include "Resources/TextureLoader.hpp"
+#include "Resources/SpriteLoader.hpp"
 
 #include <iostream> // other libs
 #include <string>
+#include <Windows.h>
 
-glm::ivec2 Size(640, 480);
+glm::ivec2 Size(1280, 720);
+
+// Eng vars
+GLenum gl_texture_mode = GL_LINEAR; // GL_LINEAR or GL_NEAREST
+string gl_default_shader = "DefaultShader"; // Name of default shader
+string gl_default_sprite_shader = "SpriteShader"; // Name of default sprite shader
 
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
@@ -62,15 +69,16 @@ int main(int argc, char* argv[]) {
     {
         ResourceManager resMan(argv[0]);
         TexLoader textures(&resMan);
+        SprLoader sprites(&resMan);
 
-        auto defaultShaderProgram = resMan.loadShaders("Default", "res/shaders/vertex.cfg", "res/shaders/fragment.cfg");
+        auto defaultShaderProgram = resMan.loadShaders(gl_default_shader, "res/shaders/vertex.cfg", "res/shaders/fragment.cfg");
 
         if (!defaultShaderProgram) {
             std::cerr << "Can't create shader program!" << std::endl;
             return -1;
         }
 
-        auto spriteShaderProgram = resMan.loadShaders("SpriteShader", "res/shaders/vSprite.cfg", "res/shaders/fSprite.cfg");
+        auto spriteShaderProgram = resMan.loadShaders(gl_default_sprite_shader, "res/shaders/vSprite.cfg", "res/shaders/fSprite.cfg");
 
         if (!spriteShaderProgram) {
             std::cerr << "Can't create SpriteShader" << std::endl;
@@ -91,21 +99,15 @@ int main(int argc, char* argv[]) {
         defaultShaderProgram->setMat4("projMat", projMat);
         spriteShaderProgram->setMat4("projMat", projMat);
 
+        sprites.add_sprite("Sprite_1", "Texture001", gl_default_sprite_shader, 200, 200, 0.f, 0, 0);
+        sprites.add_sprite("Sprite_2", "Texture002", gl_default_sprite_shader, 200, 200, 0.f, 0, 200);
+
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
+            
             defaultShaderProgram->use();
             textures.bind_all();
-            for (int i = 0; i < 3; i++) {
-                auto sprite_curr_1 = resMan.loadSprite("NewSprite_1", "Texture001", "SpriteShader", 100, 100, 0.f);
-                sprite_curr_1->setPos(glm::vec2(i * 100, i * 100));
-
-                sprite_curr_1->render();
-
-                auto sprite_curr_2 = resMan.loadSprite("NewSprite_2", "Texture002", "SpriteShader", 100, 100, 0.f);
-                sprite_curr_2->setPos(glm::vec2(i, i * 100 + 100));
-
-                sprite_curr_2->render();
-            }
+            sprites.render_all();
 
             glfwSwapBuffers(window);
             glfwPollEvents();

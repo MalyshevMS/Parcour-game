@@ -87,7 +87,7 @@ public:
         return nullptr; 
     };
 
-     std::shared_ptr <Renderer::Texture2D> loadTexture(const string& texture, const string& path) {
+     std::shared_ptr <Renderer::Texture2D> loadTexture(const string& texture, const string& path, GLenum mode) {
         int channels = 0, width = 0, height = 0;
 
         stbi_set_flip_vertically_on_load(true);
@@ -99,21 +99,23 @@ public:
             return nullptr;
         }
 
-        std::shared_ptr <Renderer::Texture2D> newTexture = _textures.emplace(texture, std::make_shared <Renderer::Texture2D> (width, height, pixs, channels, GL_NEAREST, GL_CLAMP_TO_EDGE)).first->second;
+        std::shared_ptr <Renderer::Texture2D> newTexture = _textures.emplace(texture, std::make_shared <Renderer::Texture2D> (width, height, pixs, channels, mode, GL_CLAMP_TO_EDGE)).first->second;
 
         return newTexture;
 
         stbi_image_free(pixs);
     };
 
-    std::shared_ptr <Renderer::Texture2D> getTexture(const string textureName) {
+    std::shared_ptr <Renderer::Texture2D> getTexture(const string textureName, bool noWarn = false) {
         TexturesMap::const_iterator it = _textures.find(textureName);
 
         if (it != _textures.end()) {
             return it->second;
         }
 
-        std::cerr << "Can't find the texture: " << textureName << nl;
+        if (!noWarn) {
+            std::cerr << "Can't find the texture: " << textureName << nl;
+        }
 
         return nullptr; 
     };

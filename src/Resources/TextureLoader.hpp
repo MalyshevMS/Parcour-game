@@ -13,8 +13,12 @@ public:
         this->resMan = resMan;
     };
 
-    void add_texture(const string& name, const string& path) {
-        this->textures.push_back(this->resMan->loadTexture(name, path));
+    void add_texture(const string& name, const string& path, GLenum mode = GL_NEAREST) {
+        if (this->resMan->getTexture(name, true) == nullptr) {
+            this->textures.push_back(this->resMan->loadTexture(name, path, mode));
+        } else {
+            std::cerr << "This texture already exists!" << std::endl;
+        }
     };
 
     void bind_all() {
