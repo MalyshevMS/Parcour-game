@@ -133,7 +133,7 @@ public:
             std::cerr << "Can't find the Shader: " << shaderName << " for the sprite" << nl;
         }
 
-        std::shared_ptr <Renderer::Sprite> newSprite = _sprites.emplace(texName, std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation)).first->second;
+        std::shared_ptr <Renderer::Sprite> newSprite = _sprites.emplace(spriteName, std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation)).first->second;
 
         return newSprite;
     };

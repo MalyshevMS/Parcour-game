@@ -101,12 +101,18 @@ namespace Renderer  {
             _pos = pos;
         };
 
+        glm::vec2 getPos() { return _pos; };
+
         void setSize(glm::vec2& size) {
             _size = size;
         };
 
+        glm::vec2 getSize() { return _size; };
+
         void setRotation(const float rotation) {
             _rotation = rotation;
         };
+
+        float getRotation() { return _rotation; };
     };
 }
