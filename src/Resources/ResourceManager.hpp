@@ -44,7 +44,7 @@ private:
         return buffer.str();
     };
 public:
-    ResourceManager(const string& exePath) {
+    ResourceManager(const string& exePath = "") {
         size_t found = exePath.find_last_of("/\\");
         this->_path = exePath.substr(0, found + 1);
     };
@@ -138,7 +138,7 @@ public:
         return newSprite;
     };
 
-    std::shared_ptr <Renderer::Sprite> getSprite(const string spriteName) {
+    /*std::shared_ptr <Renderer::Sprite> getSprite(const string spriteName) {
         SpritesMap::const_iterator it = _sprites.find(spriteName);
 
         if (it != _sprites.end()) {
@@ -148,5 +148,5 @@ public:
         std::cerr << "Can't find the sprite: " << spriteName << nl;
 
         return nullptr; 
-    };
+    };*/
 };

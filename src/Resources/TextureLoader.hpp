@@ -9,7 +9,7 @@ private:
     ResourceManager* resMan;
     std::vector <std::shared_ptr<Renderer::Texture2D>> textures;
 public:
-    TexLoader(ResourceManager* resMan) {
+    TexLoader(ResourceManager* resMan = nullptr) {
         this->resMan = resMan;
     };
 
