@@ -66,19 +66,6 @@ void shoot() {
     sv_bullets_count++;
 }
 
-void move_bullets() {
-    for (auto i : sg_bullets.get_sprites()) {
-        for (auto j : sg_bullets.get_current_pos()) {
-            for (auto k : sg_bullets.get_rotation()) {
-                j.x -= sv_bullet_speed * sin(glm::radians(k));
-                j.y -= sv_bullet_speed * cos(glm::radians(k));
-
-                i->setPos(j);
-            }
-        }
-    }
-}
-
 void keyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_GRAVE_ACCENT) && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(win, GL_TRUE);
@@ -194,8 +181,8 @@ int main(int argc, char const *argv[]) {
             return -1;
         }
 
-        tl_textures.add_texture("Player", tx_path_list[0]);
-        tl_textures.add_texture("Wall", tx_path_list[1]);
+        tl_textures.add_texture("Wall", tx_path_list[0]);
+        tl_textures.add_texture("Player", tx_path_list[1]);
         tl_textures.add_texture("Bullet", tx_path_list[2]);
 
         defaultShaderProgram->use();
@@ -209,16 +196,16 @@ int main(int argc, char const *argv[]) {
         defaultShaderProgram->setMat4("projMat", projMat);
         spriteShaderProgram->setMat4("projMat", projMat);
 
-        sg_player.add_sprite("Sprite_Player_1", "Wall", gl_sprite_shader, 80, 80, 0.f, cam_x - 40, cam_y - 40);
+        sg_player.add_sprite("Sprite_Player_1", "Player", gl_sprite_shader, 80, 80, 0.f, cam_x - 40, cam_y - 40);
         
         for (int i = 0; i < Size.y; i += 80) {
-            sg_sprites.add_sprite("Sprite_Wall_Left_" + std::to_string(i/80), "Player", gl_sprite_shader, 80, 80, 0.f, 0, i);
-            sg_sprites.add_sprite("Sprite_Wall_Right_" + std::to_string(i/80), "Player", gl_sprite_shader, 80, 80, 0.f, Size.x - 80, i);
+            sg_sprites.add_sprite("Sprite_Wall_Left_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, 0, i);
+            sg_sprites.add_sprite("Sprite_Wall_Right_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, Size.x - 80, i);
         }
 
         for (int i = 80; i < Size.x; i += 80) {
-            sg_sprites.add_sprite("Sprite_Wall_Bottom_" + std::to_string(i/80), "Player", gl_sprite_shader, 80, 80, 0.f, i, 0);
-            sg_sprites.add_sprite("Sprite_Wall_Top_" + std::to_string(i/80), "Player", gl_sprite_shader, 80, 80, 0.f, i, Size.y - 80);
+            sg_sprites.add_sprite("Sprite_Wall_Bottom_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, i, 0);
+            sg_sprites.add_sprite("Sprite_Wall_Top_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, i, Size.y - 80);
         }
 
         while (!glfwWindowShouldClose(window)) {
@@ -235,8 +222,6 @@ int main(int argc, char const *argv[]) {
             sg_sprites.render_all();
             sg_player.render_all();
             sg_bullets.render_all();
-
-            move_bullets();
 
             Sleep(1);
             glfwSwapBuffers(window);

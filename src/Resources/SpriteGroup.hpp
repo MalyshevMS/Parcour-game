@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <memory>
 
@@ -49,7 +51,12 @@ public:
     };
 
     void delete_all() {
-        this->sprites.clear();
+        sprites.clear();
+        default_positions.clear();
+        current_positions.clear();
+        rotations.clear();
+        sizes.clear();
+        points.clear();
     };
 
     std::vector <std::shared_ptr<Renderer::Sprite>> get_sprites() {
