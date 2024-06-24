@@ -55,8 +55,6 @@ public:
         default_positions.clear();
         current_positions.clear();
         rotations.clear();
-        sizes.clear();
-        points.clear();
     };
 
     std::vector <std::shared_ptr<Renderer::Sprite>> get_sprites() {

@@ -12,6 +12,8 @@
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
 
+#include "keys"
+
 #include <iostream> // other libs
 #include <string>
 #include <cmath>
@@ -41,11 +43,16 @@ int cam_y = Size.y / 2; // Camera Y pos
 int cam_zero_x = Size.x / 2; // Camera Zero X pos
 int cam_zero_y = Size.y / 2; // Camera Zero Y pos
 float cam_rot = 180.f; // Camera rotation
+float cam_mag = 1;
 
 int sv_max_speed = 10; // Max player (camera) movement speed
-float sv_rot_speed = 10.f; // Max player (camera) rotation speed
-unsigned int sv_bullets_count = 0;
-int sv_bullet_speed = 20;
+int sv_jump_speed = 5;
+int sv_gravity = 800;
+bool sv_on_floor = true;
+bool sv_is_jumping = false;
+
+int pl_x = cam_x - 40;
+int pl_y = cam_y - 280;
 
 ResourceManager rm_main;
 
@@ -53,7 +60,7 @@ TexLoader tl_textures;
 
 SprGroup sg_sprites;
 SprGroup sg_player;
-SprGroup sg_bullets;
+SprGroup sg_mobs;
 
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
@@ -61,38 +68,68 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
     glViewport(0, 0, Size.x, Size.y);
 }
 
-void shoot() {
-    sg_bullets.add_sprite("Bullet" + to_string(sv_bullets_count), "Bullet", gl_sprite_shader, 100, 100, 180 - cam_rot, cam_x - 50 - 100 * sin(glm::radians(cam_rot)), cam_y - 50 - 100 * cos(glm::radians(cam_rot)));
-    sv_bullets_count++;
+int collision_y() {
+    if (pl_x >= 80 && pl_x + 80 <= 1200) return 80;
+    else return 0;
 }
 
-void keyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
-    if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_GRAVE_ACCENT) && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(win, GL_TRUE);
+void jump() {
+    if (sv_on_floor) {
+        int height = pl_y + 80;
+        sv_is_jumping = true;
+        sv_on_floor = false;
+        while (pl_y < height) {
+            pl_y += sv_jump_speed;
+            Sleep(1);
+        }
+
+        while (pl_y > collision_y()) {
+            pl_y -= sv_jump_speed;
+            Sleep(1);
+        }
+        sv_on_floor = true;
+        sv_is_jumping = false;
+    }
+}
+
+void keyHandler(GLFWwindow* win) {
+    if (glfwGetKey(win, KEY_A) == GLFW_PRESS) {
+        pl_x -= sv_max_speed;
     }
 
-    if (action == GLFW_REPEAT || action == GLFW_PRESS) {
-        if (key == GLFW_KEY_W) {
-            cam_x -= sv_max_speed * sin(glm::radians(cam_rot));
-            cam_y -= sv_max_speed * cos(glm::radians(cam_rot));
-        }
+    if (glfwGetKey(win, KEY_D) == GLFW_PRESS) {
+        pl_x += sv_max_speed;
+    }
 
-        if (key == GLFW_KEY_S) {
-            cam_x += sv_max_speed * sin(glm::radians(cam_rot));
-            cam_y += sv_max_speed * cos(glm::radians(cam_rot));
-        }
+    if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        sv_max_speed = 20;
+    }
 
-        if (key == GLFW_KEY_A) {
-            cam_rot -= sv_rot_speed;
-        }
+    if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE) {
+        sv_max_speed = 10;
+    }
 
-        if (key == GLFW_KEY_D) {
-            cam_rot += sv_rot_speed;
-        }
+    if (glfwGetKey(win, KEY_SPACE) == GLFW_PRESS) {
+        std::thread t(jump);
+        t.detach();
+    }
 
-        if (key == GLFW_KEY_SPACE) {
-            shoot();
-        }
+    if (glfwGetKey(win, KEY_W) == GLFW_PRESS) {
+        pl_y = 160;
+    }
+
+    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS) {
+        cam_mag -= 0.1f;
+    }
+
+    if (glfwGetKey(win, KEY_MINUS) == GLFW_PRESS) {
+        cam_mag += 0.1f;
+    }
+}
+
+void fall() {
+    if (pl_y > collision_y() && !sv_is_jumping) {
+        pl_y -= sv_jump_speed;
     }
 }
 
@@ -147,7 +184,6 @@ int main(int argc, char const *argv[]) {
     }
 
     glfwSetWindowSizeCallback(window, sizeHandler);
-    glfwSetKeyCallback(window, keyHandler);
 
     glfwMakeContextCurrent(window);
 
@@ -165,7 +201,7 @@ int main(int argc, char const *argv[]) {
         tl_textures = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
         sg_player = SprGroup(&rm_main);
-        sg_bullets = SprGroup(&rm_main);
+        sg_mobs = SprGroup(&rm_main);
 
         auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
 
@@ -191,37 +227,40 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
 
-        glm::mat4 projMat = glm::ortho(0.f, static_cast <float> (Size.x), 0.f, static_cast <float> (Size.y), -100.f, 100.f);
+        sg_player.add_sprite("Sprite_Player", "Player", gl_sprite_shader, 80, 80, 0.f, pl_x, pl_y);
 
-        defaultShaderProgram->setMat4("projMat", projMat);
-        spriteShaderProgram->setMat4("projMat", projMat);
-
-        sg_player.add_sprite("Sprite_Player_1", "Player", gl_sprite_shader, 80, 80, 0.f, cam_x - 40, cam_y - 40);
-        
-        for (int i = 0; i < Size.y; i += 80) {
-            sg_sprites.add_sprite("Sprite_Wall_Left_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, 0, i);
-            sg_sprites.add_sprite("Sprite_Wall_Right_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, Size.x - 80, i);
-        }
-
-        for (int i = 80; i < Size.x; i += 80) {
+        for (int i = 0; i < Size.x; i += 80) {
             sg_sprites.add_sprite("Sprite_Wall_Bottom_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, i, 0);
-            sg_sprites.add_sprite("Sprite_Wall_Top_" + std::to_string(i/80), "Wall", gl_sprite_shader, 80, 80, 0.f, i, Size.y - 80);
         }
 
         while (!glfwWindowShouldClose(window)) {
+            unsigned long counter = 0ul;
             glClear(GL_COLOR_BUFFER_BIT);
+
+            keyHandler(window);
+
+            cam_x = pl_x + 40;
+            cam_y = pl_y + 280;
+
+            glm::mat4 projMat = glm::ortho(static_cast <float> (-Size.x * (cam_mag - 1)), static_cast <float> (Size.x * cam_mag), static_cast <float> (-Size.y * (cam_mag - 1)), static_cast <float> (Size.y * cam_mag), -100.f, 100.f);
+
+            defaultShaderProgram->setMat4("projMat", projMat);
+            spriteShaderProgram->setMat4("projMat", projMat);
+
 
             defaultShaderProgram->use();
             tl_textures.bind_all();
 
+            fall();
+
             sg_sprites.move_all(cam_x, cam_y, cam_zero_x, cam_zero_y);
-            sg_bullets.move_all(cam_x, cam_y, cam_zero_x, cam_zero_y);
+            sg_mobs.move_all(cam_x, cam_y, cam_zero_x, cam_zero_y);
 
             sg_player.rotate_all(180 - cam_rot);
 
             sg_sprites.render_all();
             sg_player.render_all();
-            sg_bullets.render_all();
+            sg_mobs.render_all();
 
             Sleep(1);
             glfwSwapBuffers(window);
@@ -230,8 +269,9 @@ int main(int argc, char const *argv[]) {
         
         sg_sprites.delete_all();
         sg_player.delete_all();
-        sg_bullets.delete_all();
+        sg_mobs.delete_all();
     }
+
 
     glfwTerminate();
     return 0;
