@@ -69,7 +69,7 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
 }
 
 int collision_y() {
-    if (pl_x >= 80 && pl_x + 80 <= 1200) return 80;
+    if (pl_x >= -80 && pl_x <= 1280) return 80;
     else return 0;
 }
 
