@@ -34,13 +34,14 @@ public:
         }
     };
 
-    void move_all(int cam_x, int cam_y, int zer_x, int zer_y) {
-        for (int i = 0; i < this->sprites.size(); i++) {
-            glm::vec2 point = this->default_positions[i];
-            glm::vec2 new_ = glm::vec2(point.x - cam_x + zer_x, point.y - cam_y + zer_y);
-            this->sprites[i]->setPos(new_);
-            this->current_positions[i] = new_;
+    void move_all(int x, int y) {
+        for (int i = 0; i < sprites.size(); i++) {
+            sprites[i]->setPos(glm::vec2(current_positions[i].x + x, current_positions[i].y + y)) ;
         }
+    };
+
+    void follow_cam(int cam_x, int cam_y, int zer_x, int zer_y) {
+        move_all(- cam_x + zer_x, - cam_y + zer_y);
     };
 
     void rotate_all(float cam_rot) {
