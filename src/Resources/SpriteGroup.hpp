@@ -41,7 +41,11 @@ public:
     };
 
     void follow_cam(int cam_x, int cam_y, int zer_x, int zer_y) {
-        move_all(- cam_x + zer_x, - cam_y + zer_y);
+        for (int i = 0; i < sprites.size(); i++) {
+            glm::vec2 point(default_positions[i].x, default_positions[i].y);
+            glm::vec2 new_(point.x - cam_x + zer_x, point.y - cam_y + zer_y);
+            sprites[i]->setPos(new_);
+        }
     };
 
     void rotate_all(float cam_rot) {

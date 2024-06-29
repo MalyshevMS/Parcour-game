@@ -20,7 +20,7 @@
 #include <vector>
 #include <thread>
 
-#define debug
+// #define debug
 
 using namespace std;
 
@@ -45,11 +45,11 @@ int cam_y = Size.y / 2; // Camera Y pos
 int cam_zero_x = Size.x / 2; // Camera Zero X pos
 int cam_zero_y = Size.y / 2; // Camera Zero Y pos
 float cam_rot = 180.f; // Camera rotation
-float cam_mag = 1;
-int cam_offset_x = 40;
-int cam_offset_y = 280;
-float cam_speed = 1.f;
-bool cam_locked = true;
+float cam_mag = 1.f;
+float cam_offset_x = 0;
+float cam_offset_y = 0;
+float cam_speed = 10.f;
+float cam_mag_speed = 0.01f;
 
 int sv_max_speed = 10; // Max player movement speed
 int sv_jump_speed = 5;
@@ -57,8 +57,10 @@ int sv_gravity = 800;
 bool sv_on_floor = true;
 bool sv_is_jumping = false;
 
-int pl_x = cam_x - cam_offset_x;
-int pl_y = cam_y - cam_offset_y;
+int pl_offset_x = 40;
+int pl_offset_y = 280;
+int pl_x = cam_x - pl_offset_x;
+int pl_y = cam_y - pl_offset_y;
 
 ResourceManager rm_main;
 
@@ -79,8 +81,13 @@ int collision_y() {
     else return 0;
 }
 
-bool collides_x() {
-
+int collides_x() {
+    vector sprites_pos = sg_sprites.get_current_pos();
+    for (int i = 0; i < sprites_pos.size(); i++) {
+        if (abs(pl_x - (sprites_pos[i].x + gl_sprite_size)) <= 0.1f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return -1;
+        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= 0.1f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return 1;
+    }
+    return 0;
 }
 
 void Sleep(unsigned int milliseconds) {
@@ -106,27 +113,18 @@ void jump() {
     }
 }
 
-void change_cam_lock() { 
-    cam_locked ? cam_locked = false : cam_locked = true;
-    Sleep(50);
-}
-
 void keyHandler(GLFWwindow* win) {
-    if (glfwGetKey(win, KEY_A) == GLFW_PRESS) {
+    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && collides_x() != -1) {
         pl_x -= sv_max_speed;
     }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_PRESS) {
+    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && collides_x() != 1) {
         pl_x += sv_max_speed;
     }
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
         sv_max_speed = 20;
-    }
-
-    if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE) {
-        sv_max_speed = 10;
-    }
+    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE) sv_max_speed = 10;
 
     if (glfwGetKey(win, KEY_SPACE) == GLFW_PRESS) {
         std::thread t(jump);
@@ -137,33 +135,33 @@ void keyHandler(GLFWwindow* win) {
         pl_y = 160;
     }
 
-    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS) {
-        cam_mag -= 0.1f;
+    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS && cam_mag - cam_mag_speed >= 1.f) {
+        cam_mag -= cam_mag_speed;
     }
 
     if (glfwGetKey(win, KEY_MINUS) == GLFW_PRESS) {
-        cam_mag += 0.1f;
+        cam_mag += cam_mag_speed;
     }
 
-    if (glfwGetKey(win, KEY_UP) == GLFW_PRESS && !cam_locked) {
-        cam_offset_y -= cam_speed;
-    }
-
-    if (glfwGetKey(win, KEY_DOWN) == GLFW_PRESS && !cam_locked) {
+    if (glfwGetKey(win, KEY_UP) == GLFW_PRESS) {
         cam_offset_y += cam_speed;
     }
 
-    if (glfwGetKey(win, KEY_LEFT) == GLFW_PRESS && !cam_locked) {
-        cam_offset_x -= cam_speed;
+    if (glfwGetKey(win, KEY_DOWN) == GLFW_PRESS) {
+        cam_offset_y -= cam_speed;
     }
 
-    if (glfwGetKey(win, KEY_RIGHT) == GLFW_PRESS && !cam_locked) {
+    if (glfwGetKey(win, KEY_RIGHT) == GLFW_PRESS) {
         cam_offset_x += cam_speed;
     }
 
-    if (glfwGetKey(win, KEY_LEFT_ALT) == GLFW_PRESS) {
-        std::thread t(change_cam_lock);
-        t.join();
+    if (glfwGetKey(win, KEY_LEFT) == GLFW_PRESS) {
+        cam_offset_x -= cam_speed;
+    }
+
+    if (glfwGetKey(win, KEY_F1) == GLFW_PRESS) {
+        cam_offset_x = 0;
+        cam_offset_y = 0;
     }
 }
 
@@ -177,42 +175,54 @@ int main(int argc, char const *argv[]) {
     string comand_line;
 
     #ifdef debug
-    do {
-        cout << "Minimal2D > ";
-        cin >> comand_line;
+        do {
+            cout << "Minimal2D > ";
+            cin >> comand_line;
 
-        if (comand_line == "exit") { exit(0); }
-        else if (comand_line == "get") {
-            string variable;
-            cin >> variable;
+            if (comand_line == "exit") { exit(0); }
+            else if (comand_line == "get") {
+                string variable;
+                cin >> variable;
 
-            if (variable == "gl_texture_mode") {
-                if (gl_texture_mode == GL_LINEAR) cout << "gl_texture_mode: " << '"' << "GL_LINEAR" << '"' << endl;
-                else if (gl_texture_mode == GL_NEAREST) cout << "gl_texture_mode: " << '"' << "GL_NEAREST" << '"' << endl;
-            } else if (variable == "gl_default_shader") {
-                cout << "gl_default_shader: " << '"' << gl_default_shader << '"' << endl;
+                if (variable == "gl_texture_mode") {
+                    if (gl_texture_mode == GL_LINEAR) cout << "gl_texture_mode: " << '"' << "GL_LINEAR" << '"' << endl;
+                    else if (gl_texture_mode == GL_NEAREST) cout << "gl_texture_mode: " << '"' << "GL_NEAREST" << '"' << endl;
+                } else if (variable == "gl_default_shader") {
+                    cout << "gl_default_shader: " << '"' << gl_default_shader << '"' << endl;
+                }
+            } else if (comand_line == "set") {
+                string new_value, variable;
+                cin >> new_value;
+                cin >> variable;
+
+                if (variable == "gl_texture_mode") {                
+                    if (new_value == "GL_LINEAR") gl_texture_mode = GL_LINEAR;
+                    else if (new_value == "GL_NEAREST") gl_texture_mode = GL_NEAREST;
+                } else if (variable == "gl_default_shader") {
+                    gl_default_shader = new_value;
+                } else if (variable == "gl_sprite_shader") {
+                    gl_sprite_shader = new_value;
+                }
+            } else if (comand_line == "unittest") {
+                string testfunc;
+                cin >> testfunc;
+                if (testfunc == "collides_x") {
+                    int par_pl_x, par_spr_x, par_spr_size;
+                    int buff_pl_x = pl_x;
+                    cin >> par_pl_x >> par_spr_x >> par_spr_size;
+                    pl_x = par_pl_x;
+                    cout << collides_x() << endl;
+
+                    rm_main = ResourceManager(argv[0]);
+                    tl_textures = TexLoader(&rm_main);
+                    sg_sprites = SprGroup(&rm_main);
+
+                    rm_main.loadShaders("", "", "");
+                    tl_textures.add_texture("", "");
+                    sg_sprites.add_sprite("unittest", "", "", par_spr_size, par_spr_size, 0.f, par_spr_x, 0);
+                }
             }
-        } else if (comand_line == "set") {
-            string new_value, variable;
-            cin >> new_value;
-            cin >> variable;
-
-            if (variable == "gl_texture_mode") {                
-                if (new_value == "GL_LINEAR") gl_texture_mode = GL_LINEAR;
-                else if (new_value == "GL_NEAREST") gl_texture_mode = GL_NEAREST;
-            } else if (variable == "gl_default_shader") {
-                gl_default_shader = new_value;
-            } else if (variable == "gl_sprite_shader") {
-                gl_sprite_shader = new_value;
-            }
-        } else if (comand_line == "unittest") {
-            string testfunc;
-            cin >> testfunc;
-            if (testfunc == "collides_x") {
-
-            }
-        }
-    } while (comand_line != "init");
+        } while (comand_line != "init");
     #endif
 
     if (!glfwInit()) {
@@ -281,19 +291,24 @@ int main(int argc, char const *argv[]) {
             sg_sprites.add_sprite("Sprite_Wall_Bottom_" + std::to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
         }
 
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_0", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_1", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 3, gl_sprite_size);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size);
+        /*sg_sprites.add_sprite("Sprite_Wall_Obstacle_0", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_1", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 3, gl_sprite_size * 2);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 3);*/
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
 
             keyHandler(window);
 
-            cam_x = pl_x + cam_offset_x;
-            cam_y = pl_y + cam_offset_y;
+            cam_x = pl_x + pl_offset_x;
+            cam_y = pl_y + pl_offset_y;
 
-            glm::mat4 projMat = glm::ortho(static_cast <float> (-Size.x * (cam_mag - 1)), static_cast <float> (Size.x * cam_mag), static_cast <float> (-Size.y * (cam_mag - 1)), static_cast <float> (Size.y * cam_mag), -100.f, 100.f);
+            float projMat_right  = Size.x * cam_mag + cam_offset_x;
+            float projMat_top    = Size.y * cam_mag + cam_offset_y;
+            float projMat_left   = - Size.x * (cam_mag - 1) + cam_offset_x;
+            float projMat_bottom = - Size.y * (cam_mag - 1) + cam_offset_y;
+
+            glm::mat4 projMat = glm::ortho(projMat_left, projMat_right, projMat_bottom, projMat_top, -100.f, 100.f);
 
             defaultShaderProgram->setMat4("projMat", projMat);
             spriteShaderProgram->setMat4("projMat", projMat);
@@ -306,7 +321,6 @@ int main(int argc, char const *argv[]) {
 
             sg_sprites.follow_cam(cam_x, cam_y, cam_zero_x, cam_zero_y);
             sg_mobs.follow_cam(cam_x, cam_y, cam_zero_x, cam_zero_y);
-            if (!cam_locked) sg_player.follow_cam(cam_x, cam_x, cam_zero_x, cam_zero_y);
 
             sg_player.rotate_all(180 - cam_rot);
 
