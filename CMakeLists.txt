@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
-set(project_name_ M2_engine)
+set(project_name_ Parcour-game)
 
 project(${project_name_})
 

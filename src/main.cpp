@@ -254,7 +254,7 @@ int main(int argc, char const *argv[]) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "M2 Engine", glfwGetPrimaryMonitor(), nullptr);
+    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
     if (!window) {
         cerr << "glfwCreateWindow failed!" << endl;
         glfwTerminate();
