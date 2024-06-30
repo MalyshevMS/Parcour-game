@@ -2,9 +2,16 @@
 
 #include <vector>
 #include <memory>
+#include <map>
+#include <thread>
 
 #include "ResourceManager.hpp"
 #include "../Renderer/Sprite.hpp"
+#include "../maths"
+
+void sleep(unsigned int milliseconds) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
 
 class SprGroup {
 private:
@@ -36,10 +43,17 @@ public:
 
     void move_all(int x, int y) {
         for (int i = 0; i < sprites.size(); i++) {
-            sprites[i]->setPos(glm::vec2(current_positions[i].x + x, current_positions[i].y + y)) ;
+            sprites[i]->setPos(glm::vec2(current_positions[i].x + x, current_positions[i].y + y));
         }
     };
 
+    void set_pos(int x, int y) {
+        for (int i = 0; i < sprites.size(); i++) {
+            sprites[i]->setPos(glm::vec2(x, y));
+        }
+    }
+
+    // Please don't use this function!
     void follow_cam(int cam_x, int cam_y, int zer_x, int zer_y) {
         for (int i = 0; i < sprites.size(); i++) {
             glm::vec2 point(default_positions[i].x, default_positions[i].y);

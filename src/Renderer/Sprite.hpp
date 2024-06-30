@@ -97,6 +97,10 @@ namespace Renderer  {
             glBindVertexArray(0);
         };
 
+        void move(glm::vec2& xy) {
+            setPos(_pos + xy);
+        };
+
         void setPos(const glm::vec2& pos) {
             _pos = pos;
         };

@@ -24,7 +24,7 @@
 
 using namespace std;
 
-glm::ivec2 Size(1280, 720);
+glm::ivec2 Size(3840, 2160);
 
 // Eng vars
 GLenum gl_texture_mode = GL_LINEAR; // GL_LINEAR or GL_NEAREST
@@ -40,27 +40,25 @@ vector <string> tx_path_list = {
     "res/textures/bullet.png"
 }; // List of paths to textures
 
-int cam_x = Size.x / 2; // Camera X pos
-int cam_y = Size.y / 2; // Camera Y pos
-int cam_zero_x = Size.x / 2; // Camera Zero X pos
-int cam_zero_y = Size.y / 2; // Camera Zero Y pos
+float cam_x = 0; // Camera X pos
+float cam_y = 0; // Camera Y pos
 float cam_rot = 180.f; // Camera rotation
 float cam_mag = 1.f;
-float cam_offset_x = 0;
-float cam_offset_y = 0;
 float cam_speed = 10.f;
 float cam_mag_speed = 0.01f;
+bool cam_locked = true;
 
 int sv_max_speed = 10; // Max player movement speed
 int sv_jump_speed = 5;
+int sv_jump_height = 2 * gl_sprite_size;
 int sv_gravity = 800;
 bool sv_on_floor = true;
 bool sv_is_jumping = false;
 
 int pl_offset_x = 40;
 int pl_offset_y = 280;
-int pl_x = cam_x - pl_offset_x;
-int pl_y = cam_y - pl_offset_y;
+int pl_x = Size.x / 2 - pl_offset_x;
+int pl_y = Size.y / 2 - pl_offset_y;
 
 ResourceManager rm_main;
 
@@ -76,50 +74,73 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
     glViewport(0, 0, Size.x, Size.y);
 }
 
-int collision_y() {
-    if (pl_x >= -gl_sprite_size && pl_x <= 1280) return gl_sprite_size;
-    else return 0;
-}
-
-int collides_x() {
+bool collides_floor() {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs(pl_x - (sprites_pos[i].x + gl_sprite_size)) <= 0.1f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return -1;
-        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= 0.1f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return 1;
+        if (abs(pl_y - (sprites_pos[i].y + gl_sprite_size)) <= 0.f && abs(pl_x - sprites_pos[i].x) < gl_sprite_size) return true;
     }
-    return 0;
+    return false;
 }
 
-void Sleep(unsigned int milliseconds) {
-    this_thread::sleep_for(chrono::milliseconds(milliseconds));
+bool collides_ceiling() {
+    vector sprites_pos = sg_sprites.get_current_pos();
+    for (int i = 0; i < sprites_pos.size(); i++) {
+        if (abs((pl_y + gl_sprite_size) - sprites_pos[i].y) <= 0.1f && abs(pl_x - sprites_pos[i].x) < gl_sprite_size) return true;
+    }
+    return false;
+}
+
+int collides_left() {
+    vector sprites_pos = sg_sprites.get_current_pos();
+    for (int i = 0; i < sprites_pos.size(); i++) {
+        if (abs(pl_x - (sprites_pos[i].x + gl_sprite_size)) <= 0.f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return true;
+    }
+    return false;
+}
+
+
+int collides_right() {
+    vector sprites_pos = sg_sprites.get_current_pos();
+    for (int i = 0; i < sprites_pos.size(); i++) {
+        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= 0.f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return true;
+    }
+    return false;
 }
 
 void jump() {
-    if (sv_on_floor) {
-        int height = pl_y + gl_sprite_size;
+    if (sv_on_floor && !collides_ceiling()) {
+        int height = pl_y + sv_jump_height;
         sv_is_jumping = true;
         sv_on_floor = false;
-        while (pl_y < height) {
+        while (pl_y < height && !collides_ceiling()) {
             pl_y += sv_jump_speed;
-            Sleep(1);
+            sleep(1);
         }
 
-        while (pl_y > collision_y()) {
+        while (!collides_floor() && pl_y > 0) {
             pl_y -= sv_jump_speed;
-            Sleep(1);
+            sleep(1);
         }
         sv_on_floor = true;
         sv_is_jumping = false;
     }
 }
 
+void switch_cam_lock(GLFWwindow* win, int key, int scancode, int action, int mode) {
+    if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
+        cam_locked ? cam_locked = false : cam_locked = true;
+    }
+}
+
 void keyHandler(GLFWwindow* win) {
-    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && collides_x() != -1) {
+    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && !collides_left()) {
         pl_x -= sv_max_speed;
+        if (cam_locked) cam_x -= sv_max_speed;
     }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && collides_x() != 1) {
+    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && !collides_right()) {
         pl_x += sv_max_speed;
+        if (cam_locked) cam_x += sv_max_speed;
     }
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
@@ -144,31 +165,29 @@ void keyHandler(GLFWwindow* win) {
     }
 
     if (glfwGetKey(win, KEY_UP) == GLFW_PRESS) {
-        cam_offset_y += cam_speed;
+        cam_y += cam_speed;
     }
 
     if (glfwGetKey(win, KEY_DOWN) == GLFW_PRESS) {
-        cam_offset_y -= cam_speed;
+        cam_y -= cam_speed;
     }
 
     if (glfwGetKey(win, KEY_RIGHT) == GLFW_PRESS) {
-        cam_offset_x += cam_speed;
+        cam_x += cam_speed;
     }
 
     if (glfwGetKey(win, KEY_LEFT) == GLFW_PRESS) {
-        cam_offset_x -= cam_speed;
+        cam_x -= cam_speed;
     }
 
     if (glfwGetKey(win, KEY_F1) == GLFW_PRESS) {
-        cam_offset_x = 0;
-        cam_offset_y = 0;
+        cam_x = 0;
+        cam_y = 0;
     }
 }
 
 void fall() {
-    if (pl_y > collision_y() && !sv_is_jumping) {
-        pl_y -= sv_jump_speed;
-    }
+    if (!collides_floor() && !sv_is_jumping && pl_y > 0) pl_y -= sv_jump_speed;
 }
 
 int main(int argc, char const *argv[]) {
@@ -233,14 +252,16 @@ int main(int argc, char const *argv[]) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "M2 Engine", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "M2 Engine", glfwGetPrimaryMonitor(), nullptr);
     if (!window) {
         cerr << "glfwCreateWindow failed!" << endl;
         glfwTerminate();
         return -1;
     }
 
+    glfwSetKeyCallback(window, switch_cam_lock);
     glfwSetWindowSizeCallback(window, sizeHandler);
 
     glfwMakeContextCurrent(window);
@@ -252,7 +273,7 @@ int main(int argc, char const *argv[]) {
     cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
     cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
 
-    glClearColor(0, 1, 0, 1);
+    glClearColor(0.19f, 0.61f, 0.61f, 1.f);
 
     {
         rm_main = ResourceManager(argv[0]);
@@ -288,47 +309,43 @@ int main(int argc, char const *argv[]) {
         sg_player.add_sprite("Sprite_Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
 
         for (int i = 0; i < Size.x; i += gl_sprite_size) {
-            sg_sprites.add_sprite("Sprite_Wall_Bottom_" + std::to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
+            sg_sprites.add_sprite("Sprite_Wall_Bottom_" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
         }
 
-        /*sg_sprites.add_sprite("Sprite_Wall_Obstacle_0", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_1", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 3, gl_sprite_size * 2);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size * 2, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 3);*/
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_0", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_1", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 3);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 5);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_3", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 7);
+        sg_sprites.add_sprite("Sprite_Wall_Obstacle_4", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 9);
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
 
             keyHandler(window);
 
-            cam_x = pl_x + pl_offset_x;
-            cam_y = pl_y + pl_offset_y;
-
-            float projMat_right  = Size.x * cam_mag + cam_offset_x;
-            float projMat_top    = Size.y * cam_mag + cam_offset_y;
-            float projMat_left   = - Size.x * (cam_mag - 1) + cam_offset_x;
-            float projMat_bottom = - Size.y * (cam_mag - 1) + cam_offset_y;
+            float projMat_right  = Size.x * cam_mag + cam_x;
+            float projMat_top    = Size.y * cam_mag + cam_y;
+            float projMat_left   = - Size.x * (cam_mag - 1) + cam_x;
+            float projMat_bottom = - Size.y * (cam_mag - 1) + cam_y;
 
             glm::mat4 projMat = glm::ortho(projMat_left, projMat_right, projMat_bottom, projMat_top, -100.f, 100.f);
 
             defaultShaderProgram->setMat4("projMat", projMat);
             spriteShaderProgram->setMat4("projMat", projMat);
 
-
             defaultShaderProgram->use();
             tl_textures.bind_all();
 
             fall();
 
-            sg_sprites.follow_cam(cam_x, cam_y, cam_zero_x, cam_zero_y);
-            sg_mobs.follow_cam(cam_x, cam_y, cam_zero_x, cam_zero_y);
-
             sg_player.rotate_all(180 - cam_rot);
+            sg_player.set_pos(pl_x, pl_y);
 
             sg_sprites.render_all();
             sg_player.render_all();
             sg_mobs.render_all();
 
-            Sleep(1);
+            sleep(1);
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
