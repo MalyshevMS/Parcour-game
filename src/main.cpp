@@ -21,10 +21,15 @@
 #include <thread>
 
 // #define debug
+#define fullscreen
 
 using namespace std;
 
-glm::ivec2 Size(3840, 2160);
+#ifndef fullscreen
+    glm::ivec2 Size(1280, 720);
+#else
+    glm::ivec2 Size(3840, 2160);
+#endif
 
 // Eng vars
 GLenum gl_texture_mode = GL_LINEAR; // GL_LINEAR or GL_NEAREST
@@ -54,6 +59,7 @@ int sv_jump_height = 2 * gl_sprite_size;
 int sv_gravity = 800;
 bool sv_on_floor = true;
 bool sv_is_jumping = false;
+bool sv_is_spidering = false;
 
 int pl_offset_x = 40;
 int pl_offset_y = 280;
@@ -117,7 +123,7 @@ void jump() {
             sleep(1);
         }
 
-        while (!collides_floor() && pl_y > 0) {
+        while (!collides_floor() && pl_y > 0 && !sv_is_spidering) {
             pl_y -= sv_jump_speed;
             sleep(1);
         }
@@ -126,11 +132,26 @@ void jump() {
     }
 }
 
-void switch_cam_lock(GLFWwindow* win, int key, int scancode, int action, int mode) {
+bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
+    for (auto i : sg1.get_current_pos()) {
+        for (auto j : sg2.get_current_pos()) {
+            if (abs(i.x - j.x) <= gl_sprite_size && abs(i.y - j.y) <= gl_sprite_size) return true;
+        }
+    }
+    return false;
+}
+
+void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
         cam_locked ? cam_locked = false : cam_locked = true;
     }
 }
+
+void fall() {
+    if (!collides_floor() && !sv_is_spidering && !sv_is_jumping && pl_y > 0) pl_y -= sv_jump_speed;
+}
+
+void detect_fail() {}
 
 void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_A) == GLFW_PRESS && !collides_left()) {
@@ -145,18 +166,22 @@ void keyHandler(GLFWwindow* win) {
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
         sv_max_speed = 20;
-    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE) sv_max_speed = 10;
+    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) sv_max_speed = 10;
+
+    if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        sv_max_speed = 5;
+    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv_max_speed = 10;
 
     if (glfwGetKey(win, KEY_SPACE) == GLFW_PRESS) {
         std::thread t(jump);
         t.detach();
     }
 
-    if (glfwGetKey(win, KEY_W) == GLFW_PRESS) {
-        pl_y = 160;
-    }
+    if (glfwGetKey(win, KEY_W) == GLFW_PRESS && collides_ceiling()) {
+        sv_is_spidering = true;
+    } else sv_is_spidering = false;
 
-    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS && cam_mag - cam_mag_speed >= 1.f) {
+    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS && cam_mag - cam_mag_speed >= 2.f) {
         cam_mag -= cam_mag_speed;
     }
 
@@ -186,10 +211,6 @@ void keyHandler(GLFWwindow* win) {
     }
 }
 
-void fall() {
-    if (!collides_floor() && !sv_is_jumping && pl_y > 0) pl_y -= sv_jump_speed;
-}
-
 int main(int argc, char const *argv[]) {
     string comand_line;
 
@@ -199,49 +220,7 @@ int main(int argc, char const *argv[]) {
             cin >> comand_line;
 
             if (comand_line == "exit") { exit(0); }
-            else if (comand_line == "get") {
-                string variable;
-                cin >> variable;
-
-                if (variable == "gl_texture_mode") {
-                    if (gl_texture_mode == GL_LINEAR) cout << "gl_texture_mode: " << '"' << "GL_LINEAR" << '"' << endl;
-                    else if (gl_texture_mode == GL_NEAREST) cout << "gl_texture_mode: " << '"' << "GL_NEAREST" << '"' << endl;
-                } else if (variable == "gl_default_shader") {
-                    cout << "gl_default_shader: " << '"' << gl_default_shader << '"' << endl;
-                }
-            } else if (comand_line == "set") {
-                string new_value, variable;
-                cin >> new_value;
-                cin >> variable;
-
-                if (variable == "gl_texture_mode") {                
-                    if (new_value == "GL_LINEAR") gl_texture_mode = GL_LINEAR;
-                    else if (new_value == "GL_NEAREST") gl_texture_mode = GL_NEAREST;
-                } else if (variable == "gl_default_shader") {
-                    gl_default_shader = new_value;
-                } else if (variable == "gl_sprite_shader") {
-                    gl_sprite_shader = new_value;
-                }
-            } else if (comand_line == "unittest") {
-                string testfunc;
-                cin >> testfunc;
-                if (testfunc == "collides_x") {
-                    int par_pl_x, par_spr_x, par_spr_size;
-                    int buff_pl_x = pl_x;
-                    cin >> par_pl_x >> par_spr_x >> par_spr_size;
-                    pl_x = par_pl_x;
-                    cout << collides_x() << endl;
-
-                    rm_main = ResourceManager(argv[0]);
-                    tl_textures = TexLoader(&rm_main);
-                    sg_sprites = SprGroup(&rm_main);
-
-                    rm_main.loadShaders("", "", "");
-                    tl_textures.add_texture("", "");
-                    sg_sprites.add_sprite("unittest", "", "", par_spr_size, par_spr_size, 0.f, par_spr_x, 0);
-                }
-            }
-        } while (comand_line != "init");
+        } while (comand_line != "play");
     #endif
 
     if (!glfwInit()) {
@@ -253,15 +232,21 @@ int main(int argc, char const *argv[]) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
+    #ifdef fullscreen
+        GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
+    #else 
+        GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", nullptr, nullptr);
+    #endif
+
     if (!window) {
         cerr << "glfwCreateWindow failed!" << endl;
         glfwTerminate();
         return -1;
     }
 
-    glfwSetKeyCallback(window, switch_cam_lock);
+    glfwSetKeyCallback(window, onceKeyHandler);
     glfwSetWindowSizeCallback(window, sizeHandler);
 
     glfwMakeContextCurrent(window);
@@ -308,7 +293,7 @@ int main(int argc, char const *argv[]) {
 
         sg_player.add_sprite("Sprite_Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
 
-        for (int i = 0; i < Size.x; i += gl_sprite_size) {
+        for (int i = 0; i < 3840; i += gl_sprite_size) {
             sg_sprites.add_sprite("Sprite_Wall_Bottom_" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
         }
 
@@ -317,6 +302,12 @@ int main(int argc, char const *argv[]) {
         sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 5);
         sg_sprites.add_sprite("Sprite_Wall_Obstacle_3", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 7);
         sg_sprites.add_sprite("Sprite_Wall_Obstacle_4", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 9);
+
+        sg_sprites.add_sprite("Sprite_Wall_Ceiling_0", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 7);
+        sg_sprites.add_sprite("Sprite_Wall_Ceiling_1", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 3, gl_sprite_size * 7);
+        sg_sprites.add_sprite("Sprite_Wall_Ceiling_2", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 7);
+        sg_sprites.add_sprite("Sprite_Wall_Ceiling_3", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 5, gl_sprite_size * 7);
+        sg_sprites.add_sprite("Sprite_Wall_Ceiling_4", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 6, gl_sprite_size * 7);
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
