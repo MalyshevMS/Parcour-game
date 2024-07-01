@@ -1,8 +1,9 @@
 # M2 engine
  - [My github](https://github.com/MalyshevMS)
  - [How to run it?](#how-to-run-it)
+ - [Engine source code](https://github.com/MalyshevMS/M2-engine)
 
-This is a simply minimalistic 2D engine for 8-bit tanks.
+This is a simply minimalistic 2D game about parkour.
 
 ### WARNING
 Project is on develop stage! Running it on your PC is only **YOUR** responsibility!\
