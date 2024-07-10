@@ -1,4 +1,4 @@
-# M2 engine
+# ParCour game
  - [My github](https://github.com/MalyshevMS)
  - [How to run it?](#how-to-run-it)
  - [Engine source code](https://github.com/MalyshevMS/M2-engine)
