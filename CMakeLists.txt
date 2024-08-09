@@ -11,6 +11,8 @@ add_executable(${project_name_}
     src/Resources/stb_image.hpp
     src/Renderer/Texture2D.hpp
     src/Renderer/Sprite.hpp
+    src/Resources/LvlParser.hpp
+    src/Online/Client.hpp
 )
 
 target_compile_features(${project_name_} PUBLIC cxx_std_17)
@@ -34,3 +36,7 @@ set_target_properties(${project_name_} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMA
 add_custom_command(TARGET ${project_name_} POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/res $<TARGET_FILE_DIR:${project_name_}>/res)
+
+add_custom_command(TARGET ${project_name_} POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+${CMAKE_SOURCE_DIR}/settings $<TARGET_FILE_DIR:${project_name_}>)
