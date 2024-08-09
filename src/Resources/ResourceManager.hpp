@@ -30,6 +30,14 @@ private:
 
     string _path;
 
+public:
+    ResourceManager(const string& exePath = "") {
+        size_t found = exePath.find_last_of("/\\");
+        this->_path = exePath.substr(0, found + 1);
+    };
+
+    ~ResourceManager() = default;
+    
     string getFileStr(const string& path) const {
         std::ifstream f;
         f.open(_path + path, std::ios::in | std::ios::binary);
@@ -43,13 +51,10 @@ private:
 
         return buffer.str();
     };
-public:
-    ResourceManager(const string& exePath = "") {
-        size_t found = exePath.find_last_of("/\\");
-        this->_path = exePath.substr(0, found + 1);
-    };
 
-    ~ResourceManager() = default;
+    string getExePath() {
+        return _path;
+    };
 
     std::shared_ptr <Renderer::ShaderProgram> loadShaders(const string& shaderName, const string& vertexPath, const string& fragmentPath) {
         string vertexStr = getFileStr(vertexPath);

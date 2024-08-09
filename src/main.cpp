@@ -11,6 +11,7 @@
 #include "Resources/ResourceManager.hpp"
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
+#include "Online/Client.hpp"
 
 #include "keys"
 
@@ -19,9 +20,12 @@
 #include <cmath>
 #include <vector>
 #include <thread>
+#pragma comment(lib, "ws2_32.lib")
+#include <winsock2.h>
+#pragma warning(disable: 4996)
 
 // #define debug
-#define fullscreen
+// #define fullscreen
 
 using namespace std;
 
@@ -57,14 +61,17 @@ int sv_max_speed = 10; // Max player movement speed
 int sv_jump_speed = 5;
 int sv_jump_height = 2 * gl_sprite_size;
 int sv_gravity = 800;
-bool sv_on_floor = true;
-bool sv_is_jumping = false;
-bool sv_is_spidering = false;
 
 int pl_offset_x = 40;
 int pl_offset_y = 280;
 int pl_x = Size.x / 2 - pl_offset_x;
 int pl_y = Size.y / 2 - pl_offset_y;
+int pl2_x = 0;
+int pl2_y = 0;
+bool pl_on_floor = true;
+bool pl_is_jumping = false;
+bool pl_is_spidering = false;
+vector <glm::vec2> pl_coords;
 
 ResourceManager rm_main;
 
@@ -73,6 +80,7 @@ TexLoader tl_textures;
 SprGroup sg_sprites;
 SprGroup sg_player;
 SprGroup sg_mobs;
+SprGroup sg_player2;
 
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
@@ -114,21 +122,21 @@ int collides_right() {
 }
 
 void jump() {
-    if (sv_on_floor && !collides_ceiling()) {
+    if (pl_on_floor && !collides_ceiling()) {
         int height = pl_y + sv_jump_height;
-        sv_is_jumping = true;
-        sv_on_floor = false;
+        pl_is_jumping = true;
+        pl_on_floor = false;
         while (pl_y < height && !collides_ceiling()) {
             pl_y += sv_jump_speed;
             sleep(1);
         }
 
-        while (!collides_floor() && pl_y > 0 && !sv_is_spidering) {
+        while (!collides_floor() && pl_y > 0 && !pl_is_spidering) {
             pl_y -= sv_jump_speed;
             sleep(1);
         }
-        sv_on_floor = true;
-        sv_is_jumping = false;
+        pl_on_floor = true;
+        pl_is_jumping = false;
     }
 }
 
@@ -148,7 +156,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
 }
 
 void fall() {
-    if (!collides_floor() && !sv_is_spidering && !sv_is_jumping && pl_y > 0) pl_y -= sv_jump_speed;
+    if (!collides_floor() && !pl_is_spidering && !pl_is_jumping && pl_y > 0) pl_y -= sv_jump_speed;
 }
 
 void detect_fail() {}
@@ -178,8 +186,8 @@ void keyHandler(GLFWwindow* win) {
     }
 
     if (glfwGetKey(win, KEY_W) == GLFW_PRESS && collides_ceiling()) {
-        sv_is_spidering = true;
-    } else sv_is_spidering = false;
+        pl_is_spidering = true;
+    } else pl_is_spidering = false;
 
     if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS && cam_mag - cam_mag_speed >= 2.f) {
         cam_mag -= cam_mag_speed;
@@ -231,7 +239,6 @@ int main(int argc, char const *argv[]) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
 
     #ifdef fullscreen
@@ -254,6 +261,13 @@ int main(int argc, char const *argv[]) {
     if (!gladLoadGL()) {
         cerr << "Can't load GLAD!" << endl;
     }
+
+    WSAData wsaData;
+	WORD DLLVersion = MAKEWORD(2, 1);
+	if (WSAStartup(DLLVersion, &wsaData) != 0) {
+	    std::cout << "Error" << std::endl;
+		return -1;
+	}
 
     cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
     cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
@@ -291,23 +305,21 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
 
-        sg_player.add_sprite("Sprite_Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
+        sg_player.add_sprite("Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
 
         for (int i = 0; i < 3840; i += gl_sprite_size) {
-            sg_sprites.add_sprite("Sprite_Wall_Bottom_" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
+            sg_sprites.add_sprite("WallBottom" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
         }
 
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_0", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_1", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 3);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_2", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 5);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_3", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 7);
-        sg_sprites.add_sprite("Sprite_Wall_Obstacle_4", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 9);
-
-        sg_sprites.add_sprite("Sprite_Wall_Ceiling_0", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 2, gl_sprite_size * 7);
-        sg_sprites.add_sprite("Sprite_Wall_Ceiling_1", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 3, gl_sprite_size * 7);
-        sg_sprites.add_sprite("Sprite_Wall_Ceiling_2", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 4, gl_sprite_size * 7);
-        sg_sprites.add_sprite("Sprite_Wall_Ceiling_3", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 5, gl_sprite_size * 7);
-        sg_sprites.add_sprite("Sprite_Wall_Ceiling_4", "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, gl_sprite_size * 6, gl_sprite_size * 7);
+        string servercfg = rm_main.getFileStr("server.cfg");
+        string ip = servercfg.substr(0, servercfg.find_first_of(':'));
+        USHORT port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
+        
+        Client cli(ip, port);
+        auto pl2_connection = cli.recv_msg();
+        if (pl2_connection == (char*)0xC2C) {
+            sg_player2 = SprGroup(&rm_main);
+        }
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
@@ -327,14 +339,22 @@ int main(int argc, char const *argv[]) {
             defaultShaderProgram->use();
             tl_textures.bind_all();
 
+            cli.send_msg(to_string(pl_x) + "/" + to_string(pl_y) + ";");
+            auto pl2_coords = cli.recv_msg();
+            pl2_x = stoi(pl2_coords.substr(0, pl2_coords.find_first_of("/")));
+            pl2_y = stoi(pl2_coords.substr(pl2_coords.find_first_of("/") + 1, pl2_coords.find_first_of(";")));
+
             fall();
 
             sg_player.rotate_all(180 - cam_rot);
             sg_player.set_pos(pl_x, pl_y);
+            sg_player.rotate_all(180 - cam_rot);
+            sg_player2.set_pos(pl2_x, pl2_y);
 
             sg_sprites.render_all();
             sg_player.render_all();
             sg_mobs.render_all();
+            sg_player2.render_all();
 
             sleep(1);
             glfwSwapBuffers(window);
@@ -344,6 +364,7 @@ int main(int argc, char const *argv[]) {
         sg_sprites.delete_all();
         sg_player.delete_all();
         sg_mobs.delete_all();
+        sg_player2.delete_all();
     }
 
 
