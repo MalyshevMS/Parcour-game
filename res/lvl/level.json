@@ -1,0 +1,23 @@
+{
+    "sprite_size": 80,
+    "textures": {
+        "count": 3,
+        "array": [
+            {
+                "name": "Wall",
+                "path": "res/textures/wall"
+            },
+            {
+                "name": "Player",
+                "path": "res/textures/wall"
+            },
+            {
+                "name": "Bullet",
+                "path": "res/textures/wall"
+            }
+        ]
+    },
+    "level": {
+        "started a work with level json design": 0
+    }
+}
