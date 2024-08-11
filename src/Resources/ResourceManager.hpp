@@ -22,11 +22,9 @@ class ResourceManager {
 private:
     typedef std::map <const string, std::shared_ptr <Renderer::ShaderProgram>> ShaderProgramsMap;
     typedef std::map <const string, std::shared_ptr<Renderer::Texture2D>> TexturesMap;
-    typedef std::map <const string, std::shared_ptr<Renderer::Sprite>> SpritesMap;
 
     ShaderProgramsMap _shaderPrograms;
     TexturesMap _textures;
-    SpritesMap _sprites;
 
     string _path;
 
@@ -125,7 +123,7 @@ public:
         return nullptr; 
     };
 
-    std::shared_ptr <Renderer::Sprite> loadSprite(const string spriteName, const string& texName, const string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
+    std::shared_ptr <Renderer::Sprite> loadSprite(const string& texName, const string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
         auto tex = getTexture(texName);
 
         if (!tex) {
@@ -138,20 +136,8 @@ public:
             std::cerr << "Can't find the Shader: " << shaderName << " for the sprite" << nl;
         }
 
-        std::shared_ptr <Renderer::Sprite> newSprite = _sprites.emplace(spriteName, std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation)).first->second;
+        std::shared_ptr <Renderer::Sprite> newSprite = std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation);
 
         return newSprite;
     };
-
-    /*std::shared_ptr <Renderer::Sprite> getSprite(const string spriteName) {
-        SpritesMap::const_iterator it = _sprites.find(spriteName);
-
-        if (it != _sprites.end()) {
-            return it->second;
-        }
-
-        std::cerr << "Can't find the sprite: " << spriteName << nl;
-
-        return nullptr; 
-    };*/
 };

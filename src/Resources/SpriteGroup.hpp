@@ -25,8 +25,8 @@ public:
         this->resMan = resMan;
     };
 
-    void add_sprite(const string& name, const string& tex, const string& shader, unsigned int width, unsigned int height, float rotation, int pos_x, int pos_y) {
-        auto new_spr = this->resMan->loadSprite(name, tex, shader, width, height, rotation);
+    void add_sprite(const string& tex, const string& shader, unsigned int width, unsigned int height, float rotation, int pos_x, int pos_y) {
+        auto new_spr = this->resMan->loadSprite(tex, shader, width, height, rotation);
         new_spr->setPos(glm::vec2(pos_x, pos_y));
 
         sprites.push_back(new_spr);

@@ -310,11 +310,11 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
 
-        sg_player.add_sprite("Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
-        sg_player2.add_sprite("Player2", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y);
+        sg_player.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
+        sg_player2.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y);
 
         for (int i = 0; i < 3840; i += gl_sprite_size) {
-            sg_sprites.add_sprite("WallBottom" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
+            sg_sprites.add_sprite("Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
         }
 
         string servercfg = rm_main.getFileStr("server.cfg");
