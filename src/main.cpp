@@ -153,6 +153,10 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
         cam_locked ? cam_locked = false : cam_locked = true;
     }
+
+    if (key == KEY_G && action == GLFW_PRESS) {
+        cout << "(" << pl2_x << ", " << pl2_y << ")" << endl;
+    }
 }
 
 void fall() {
@@ -279,6 +283,7 @@ int main(int argc, char const *argv[]) {
         tl_textures = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
         sg_player = SprGroup(&rm_main);
+        sg_player2 = SprGroup(&rm_main);
         sg_mobs = SprGroup(&rm_main);
 
         auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
@@ -306,6 +311,7 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->setInt("tex", 0);
 
         sg_player.add_sprite("Player", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
+        sg_player2.add_sprite("Player2", "Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y);
 
         for (int i = 0; i < 3840; i += gl_sprite_size) {
             sg_sprites.add_sprite("WallBottom" + to_string(i/gl_sprite_size), "Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
@@ -316,10 +322,6 @@ int main(int argc, char const *argv[]) {
         USHORT port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
         
         Client cli(ip, port);
-        auto pl2_connection = cli.recv_msg();
-        if (pl2_connection == (char*)0xC2C) {
-            sg_player2 = SprGroup(&rm_main);
-        }
 
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
@@ -348,7 +350,8 @@ int main(int argc, char const *argv[]) {
 
             sg_player.rotate_all(180 - cam_rot);
             sg_player.set_pos(pl_x, pl_y);
-            sg_player.rotate_all(180 - cam_rot);
+
+            sg_player2.rotate_all(180 - cam_rot);
             sg_player2.set_pos(pl2_x, pl2_y);
 
             sg_sprites.render_all();
