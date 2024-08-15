@@ -11,6 +11,7 @@
 #include "Resources/ResourceManager.hpp"
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
+#include "Resources/LvlParser.hpp"
 #include "Online/Client.hpp"
 
 #include "keys"
@@ -42,12 +43,6 @@ string gl_sprite_shader = "SpriteShader"; // Name of default sprite shader
 vector <string> gl_default_shader_path_list = {"res/shaders/vertex.cfg", "res/shaders/fragment.cfg"}; // List of paths to default shader
 vector <string> gl_sprite_shader_path_list = {"res/shaders/vSprite.cfg", "res/shaders/fSprite.cfg"}; // List of paths to sprite shader
 int gl_sprite_size = 80;
-
-vector <string> tx_path_list = {
-    "res/textures/wall.png",
-    "res/textures/player.png",
-    "res/textures/bullet.png"
-}; // List of paths to textures
 
 float cam_x = 0; // Camera X pos
 float cam_y = 0; // Camera Y pos
@@ -82,6 +77,8 @@ SprGroup sg_player;
 SprGroup sg_mobs;
 SprGroup sg_player2;
 
+Parser pars_main;
+
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
     Size.y = height;
@@ -111,7 +108,6 @@ int collides_left() {
     }
     return false;
 }
-
 
 int collides_right() {
     vector sprites_pos = sg_sprites.get_current_pos();
@@ -285,6 +281,7 @@ int main(int argc, char const *argv[]) {
         sg_player = SprGroup(&rm_main);
         sg_player2 = SprGroup(&rm_main);
         sg_mobs = SprGroup(&rm_main);
+        pars_main = Parser(&rm_main, &tl_textures, &sg_sprites);
 
         auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
 
@@ -300,22 +297,17 @@ int main(int argc, char const *argv[]) {
             return -1;
         }
 
-        tl_textures.add_texture("Wall", tx_path_list[0]);
-        tl_textures.add_texture("Player", tx_path_list[1]);
-        tl_textures.add_texture("Bullet", tx_path_list[2]);
-
         defaultShaderProgram->use();
         defaultShaderProgram->setInt("tex", 0);
 
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
+        
+        pars_main.parse_lvl("res/lvl/level.json", gl_sprite_shader, &gl_sprite_size);
 
         sg_player.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
         sg_player2.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y);
 
-        for (int i = 0; i < 3840; i += gl_sprite_size) {
-            sg_sprites.add_sprite("Wall", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, i, 0);
-        }
 
         string servercfg = rm_main.getFileStr("server.cfg");
         string ip = servercfg.substr(0, servercfg.find_first_of(':'));

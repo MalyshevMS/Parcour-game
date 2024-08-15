@@ -1,5 +1,5 @@
 {
-    "sprite_size": 80,
+    "sprite.size": 80,
     "textures": {
         "count": 3,
         "array": [
@@ -17,7 +17,83 @@
             }
         ]
     },
-    "level": {
-        "started a work with level json design": 0
-    }
+    "level": [
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 0, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 80, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 160, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 240, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 320, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 400, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 480, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 560, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 640, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 720, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 800, "y": 0,
+            "rot": 0.0,
+            "end": true
+        }
+    ]
 }
