@@ -1,0 +1,7 @@
+{
+    "max_speed": 10,
+    "jump_speed": 5,
+    "jump_height": 160,
+    "gravity": 800,
+    "// Please do not change anythig here": 0
+}
