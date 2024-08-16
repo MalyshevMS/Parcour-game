@@ -1,19 +1,32 @@
 {
     "sprite.size": 80,
+    "shaders": {
+        "default": {
+            "name": "DefaultShader",
+            "path.frag": "res/shaders/fragment.cfg",
+            "path.vert": "res/shaders/vertex.cfg"
+        },
+        
+        "sprite": {
+            "name": "SpriteShader",
+            "path.frag": "res/shaders/fSprite.cfg",
+            "path.vert": "res/shaders/vSprite.cfg"
+        }
+    },
     "textures": {
         "count": 3,
         "array": [
             {
                 "name": "Wall",
-                "path": "res/textures/wall"
+                "path": "res/textures/wall.png"
             },
             {
                 "name": "Player",
-                "path": "res/textures/wall"
+                "path": "res/textures/player.png"
             },
             {
                 "name": "Bullet",
-                "path": "res/textures/wall"
+                "path": "res/textures/bullet.png"
             }
         ]
     },
