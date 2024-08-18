@@ -1,3 +1,7 @@
+// #define debug
+// #define fullscreen
+// #define online
+
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
 
@@ -12,7 +16,10 @@
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
 #include "Resources/Parser.hpp"
-#include "Online/Client.hpp"
+
+#ifdef online
+    #include "Online/Client.hpp"
+#endif
 
 #include "keys"
 
@@ -21,12 +28,12 @@
 #include <cmath>
 #include <vector>
 #include <thread>
-#pragma comment(lib, "ws2_32.lib")
-#include <winsock2.h>
-#pragma warning(disable: 4996)
 
-// #define debug
-// #define fullscreen
+#ifdef online
+    #pragma comment(lib, "ws2_32.lib")
+    #include <winsock2.h>
+    #pragma warning(disable: 4996)
+#endif
 
 using namespace std;
 
@@ -260,12 +267,15 @@ int main(int argc, char const *argv[]) {
         cerr << "Can't load GLAD!" << endl;
     }
 
-    WSAData wsaData;
-	WORD DLLVersion = MAKEWORD(2, 1);
-	if (WSAStartup(DLLVersion, &wsaData) != 0) { // Checking for WSA
-	    cout << "Can't load WSA!" << endl;
-		return -1;
-	}
+
+    #ifdef online
+        WSAData wsaData;
+        WORD DLLVersion = MAKEWORD(2, 1);
+        if (WSAStartup(DLLVersion, &wsaData) != 0) { // Checking for WSA
+            cout << "Can't load WSA!" << endl;
+            return -1;
+        }
+    #endif
     
     // Displaying Render and OpenGL info
     cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
@@ -293,7 +303,9 @@ int main(int argc, char const *argv[]) {
         string ip = servercfg.substr(0, servercfg.find_first_of(':')); // Server IP
         unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str()); // Server port
         
-        Client cli(ip, port); // Adding client
+        #ifdef online
+            Client cli(ip, port); // Adding client
+        #endif
 
         pars_main.parse_lvl("res/lvl/level.json", &gl_sprite_size, &default_shader, &sprite_shader); // Parsing level
         
@@ -316,10 +328,12 @@ int main(int argc, char const *argv[]) {
             default_shader->use();
             tl_textures.bind_all();
 
-            cli.send_msg(to_string(pl_x) + "/" + to_string(pl_y) + ";");
-            auto pl2_coords = cli.recv_msg();
-            pl2_x = stoi(pl2_coords.substr(0, pl2_coords.find_first_of("/")));
-            pl2_y = stoi(pl2_coords.substr(pl2_coords.find_first_of("/") + 1, pl2_coords.find_first_of(";")));
+            #ifdef online
+                cli.send_msg(to_string(pl_x) + "/" + to_string(pl_y) + ";");
+                auto pl2_coords = cli.recv_msg();
+                pl2_x = stoi(pl2_coords.substr(0, pl2_coords.find_first_of("/")));
+                pl2_y = stoi(pl2_coords.substr(pl2_coords.find_first_of("/") + 1, pl2_coords.find_first_of(";")));
+            #endif
 
             fall();
 
