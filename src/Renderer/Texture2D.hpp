@@ -10,9 +10,9 @@ namespace Renderer {
         GLuint _ID;
         unsigned int _width, _height;
     public:
-        Texture2D(const GLuint width, const GLuint height, 
-        const unsigned char* data, const unsigned int channels, 
-        const GLenum filter, const GLenum wrap_mode) {
+        Texture2D(GLuint width, GLuint height, 
+        unsigned char* data, unsigned int channels, 
+        GLenum filter, GLenum wrap_mode) {
             _width = width;
             _height = height;
 
@@ -46,10 +46,6 @@ namespace Renderer {
         ~Texture2D() {
             glDeleteTextures(1, &_ID);
         };
-
-        Texture2D() = delete;
-        Texture2D(const Texture2D&) = delete;
-        Texture2D& operator=(const Texture2D&) = delete;
 
         Texture2D& operator=(Texture2D&& text2d) {
             glDeleteTextures(1, &_ID);

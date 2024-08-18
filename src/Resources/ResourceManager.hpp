@@ -15,33 +15,32 @@
 #define STBI_ONLY_PNG
 #include "stb_image.hpp"
 
-#define string std::string
 #define nl std::endl
 
 class ResourceManager {
 private:
-    typedef std::map <const string, std::shared_ptr <Renderer::ShaderProgram>> ShaderProgramsMap;
-    typedef std::map <const string, std::shared_ptr<Renderer::Texture2D>> TexturesMap;
+    typedef std::map <const std::string, std::shared_ptr <Renderer::ShaderProgram>> ShaderProgramsMap;
+    typedef std::map <const std::string, std::shared_ptr<Renderer::Texture2D>> TexturesMap;
 
     ShaderProgramsMap _shaderPrograms;
     TexturesMap _textures;
 
-    string _path;
+    std::string _path;
 
 public:
-    ResourceManager(const string& exePath = "") {
+    ResourceManager(std::string exePath = "") {
         size_t found = exePath.find_last_of("/\\");
         this->_path = exePath.substr(0, found + 1);
     };
 
     ~ResourceManager() = default;
     
-    string getFileStr(const string& path) const {
+    std::string getFileStr(std::string path) const {
         std::ifstream f;
         f.open(_path + path, std::ios::in | std::ios::binary);
         if (!f.is_open()) {
             std::cerr << "Failed to open file " << _path + path << nl;
-            return string();
+            return std::string();
         }
 
         std::stringstream buffer;
@@ -50,18 +49,18 @@ public:
         return buffer.str();
     };
 
-    string getExePath() {
+    std::string getExePath() {
         return _path;
     };
 
-    std::shared_ptr <Renderer::ShaderProgram> loadShaders(const string& shaderName, const string& vertexPath, const string& fragmentPath) {
-        string vertexStr = getFileStr(vertexPath);
+    std::shared_ptr <Renderer::ShaderProgram> loadShaders(std::string shaderName, std::string vertexPath, std::string fragmentPath) {
+        std::string vertexStr = getFileStr(vertexPath);
         if (vertexStr.empty()) {
             std::cerr << "No vertex shader!" << nl;
             return nullptr;
         }
 
-        string fragmentStr = getFileStr(fragmentPath);
+        std::string fragmentStr = getFileStr(fragmentPath);
         if (fragmentStr.empty()) {
             std::cerr << "No fragment shader!" << nl;
             return nullptr;
@@ -78,7 +77,7 @@ public:
         return nullptr;
     };
 
-    std::shared_ptr <Renderer::ShaderProgram> getShader(const string shaderName) {
+    std::shared_ptr <Renderer::ShaderProgram> getShader(std::string shaderName) {
         ShaderProgramsMap::const_iterator it = _shaderPrograms.find(shaderName);
 
         if (it != _shaderPrograms.end()) {
@@ -90,12 +89,12 @@ public:
         return nullptr; 
     };
 
-     std::shared_ptr <Renderer::Texture2D> loadTexture(const string& texture, const string& path, GLenum mode) {
+     std::shared_ptr <Renderer::Texture2D> loadTexture(std::string texture, std::string path, GLenum mode) {
         int channels = 0, width = 0, height = 0;
 
         stbi_set_flip_vertically_on_load(true);
 
-        unsigned char* pixs = stbi_load(string(_path + "/" + path).c_str(), &width, &height, &channels, 0);
+        unsigned char* pixs = stbi_load(std::string(_path + "/" + path).c_str(), &width, &height, &channels, 0);
 
         if (!pixs) {
             std::cerr << "Texture Loading Error: " << path << " does not exists" << nl;
@@ -109,7 +108,7 @@ public:
         stbi_image_free(pixs);
     };
 
-    std::shared_ptr <Renderer::Texture2D> getTexture(const string textureName, bool noWarn = false) {
+    std::shared_ptr <Renderer::Texture2D> getTexture(std::string textureName, bool noWarn = false) {
         TexturesMap::const_iterator it = _textures.find(textureName);
 
         if (it != _textures.end()) {
@@ -123,7 +122,7 @@ public:
         return nullptr; 
     };
 
-    std::shared_ptr <Renderer::Sprite> loadSprite(const string& texName, const string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
+    std::shared_ptr <Renderer::Sprite> loadSprite(std::string texName, std::string shaderName, unsigned int Width, unsigned int Height, float Rotation) {
         auto tex = getTexture(texName);
 
         if (!tex) {

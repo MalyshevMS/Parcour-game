@@ -9,7 +9,7 @@
 namespace Renderer {
     class ShaderProgram {
     private:
-        bool createShader(const std::string& source, const GLenum shaderType, GLuint& shaderID) {
+        bool createShader(std::string source, GLenum shaderType, GLuint shaderID) {
             shaderID = glCreateShader(shaderType);
             const char* code = source.c_str();
             glShaderSource(shaderID, 1, &code, nullptr);
@@ -32,7 +32,7 @@ namespace Renderer {
         bool _isCompiled = false;
         GLuint _ID = 0;
     public:
-        ShaderProgram(const std::string& vertexShader, const std::string& fragmentShader) {
+        ShaderProgram(std::string vertexShader, std::string fragmentShader) {
             GLuint vsID;
             if(!createShader(vertexShader, GL_VERTEX_SHADER, vsID)) {
                 return;
@@ -78,17 +78,13 @@ namespace Renderer {
             glUseProgram(_ID);
         };
 
-        void setInt(const std::string& name, const GLint value) {
+        void setInt(std::string name, GLint value) {
             glUniform1i(glGetUniformLocation(_ID, name.c_str()), value);
         };
 
-        void setMat4(const std::string& name, const glm::mat4& matrix) {
+        void setMat4(std::string name, glm::mat4 matrix) {
             glUniformMatrix4fv(glGetUniformLocation(_ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
         };
-
-        ShaderProgram() = delete;
-        ShaderProgram(ShaderProgram&) = delete;
-        ShaderProgram& operator=(const ShaderProgram&) = delete;
 
         ShaderProgram& operator=(ShaderProgram&& Shader_Program) noexcept {
             glDeleteProgram(_ID);

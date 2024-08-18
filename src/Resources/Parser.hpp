@@ -24,7 +24,7 @@ public:
         std::shared_ptr<Renderer::ShaderProgram>* _sprite_shader) {
         json file;
         std::ifstream inp;
-        inp.open(rm->getExePath() + path);
+        inp.open(rm->getExePath() + "/" + path);
         inp >> file;
 
         *spr_size = file["spite.size"];

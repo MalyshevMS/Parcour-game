@@ -15,7 +15,7 @@ public:
         this->resMan = resMan;
     };
 
-    void add_texture(const string& name, const string& path, GLenum mode = GL_NEAREST) {
+    void add_texture(std::string name, std::string path, GLenum mode = GL_NEAREST) {
         if (this->resMan->getTexture(name, true) == nullptr) {
             this->textures.push_back(this->resMan->loadTexture(name, path, mode));
         } else {
