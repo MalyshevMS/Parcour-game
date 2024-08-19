@@ -102,9 +102,9 @@ public:
 
         std::shared_ptr <Renderer::Texture2D> newTexture = _textures.emplace(texture, std::make_shared <Renderer::Texture2D> (width, height, pixs, channels, mode, GL_CLAMP_TO_EDGE)).first->second;
 
-        return newTexture;
-
         stbi_image_free(pixs);
+        
+        return newTexture;
     };
 
     std::shared_ptr <Renderer::Texture2D> getTexture(const std::string textureName, bool noWarn = false) {
