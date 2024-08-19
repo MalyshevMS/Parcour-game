@@ -9,7 +9,6 @@ add_executable(${project_name_}
     src/Renderer/ShaderProgram.hpp
     src/Resources/ResourceManager.hpp
     src/Resources/stb_image.hpp
-    src/Resources/json.hpp
     src/Renderer/Texture2D.hpp
     src/Renderer/Sprite.hpp
     src/Resources/Parser.hpp

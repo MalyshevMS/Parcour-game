@@ -14,7 +14,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
 #include "stb_image.hpp"
-
 #define nl std::endl
 
 class ResourceManager {
@@ -28,14 +27,14 @@ private:
     std::string _path;
 
 public:
-    ResourceManager(std::string exePath = "") {
+    ResourceManager(const std::string& exePath = "") {
         size_t found = exePath.find_last_of("/\\");
         this->_path = exePath.substr(0, found + 1);
     };
 
     ~ResourceManager() = default;
     
-    std::string getFileStr(std::string path) const {
+    std::string getFileStr(const std::string& path) const {
         std::ifstream f;
         f.open(_path + path, std::ios::in | std::ios::binary);
         if (!f.is_open()) {
@@ -53,7 +52,7 @@ public:
         return _path;
     };
 
-    std::shared_ptr <Renderer::ShaderProgram> loadShaders(std::string shaderName, std::string vertexPath, std::string fragmentPath) {
+    std::shared_ptr <Renderer::ShaderProgram> loadShaders(const std::string& shaderName, const std::string& vertexPath, const std::string& fragmentPath) {
         std::string vertexStr = getFileStr(vertexPath);
         if (vertexStr.empty()) {
             std::cerr << "No vertex shader!" << nl;
@@ -77,7 +76,7 @@ public:
         return nullptr;
     };
 
-    std::shared_ptr <Renderer::ShaderProgram> getShader(std::string shaderName) {
+    std::shared_ptr <Renderer::ShaderProgram> getShader(const std::string shaderName) {
         ShaderProgramsMap::const_iterator it = _shaderPrograms.find(shaderName);
 
         if (it != _shaderPrograms.end()) {
@@ -89,7 +88,7 @@ public:
         return nullptr; 
     };
 
-     std::shared_ptr <Renderer::Texture2D> loadTexture(std::string texture, std::string path, GLenum mode) {
+     std::shared_ptr <Renderer::Texture2D> loadTexture(const std::string& texture, const std::string& path, GLenum mode) {
         int channels = 0, width = 0, height = 0;
 
         stbi_set_flip_vertically_on_load(true);
@@ -108,7 +107,7 @@ public:
         stbi_image_free(pixs);
     };
 
-    std::shared_ptr <Renderer::Texture2D> getTexture(std::string textureName, bool noWarn = false) {
+    std::shared_ptr <Renderer::Texture2D> getTexture(const std::string textureName, bool noWarn = false) {
         TexturesMap::const_iterator it = _textures.find(textureName);
 
         if (it != _textures.end()) {
@@ -122,7 +121,7 @@ public:
         return nullptr; 
     };
 
-    std::shared_ptr <Renderer::Sprite> loadSprite(std::string texName, std::string shaderName, unsigned int Width, unsigned int Height, float Rotation) {
+    std::shared_ptr <Renderer::Sprite> loadSprite(const std::string& texName, const std::string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
         auto tex = getTexture(texName);
 
         if (!tex) {

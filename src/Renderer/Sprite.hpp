@@ -20,7 +20,7 @@ namespace Renderer  {
         GLuint _vertexCoordsVBO;
         GLuint _texCoordsVBO;
     public:
-        Sprite(std::shared_ptr<Texture2D> tex, std::shared_ptr<ShaderProgram> shader_prog, glm::vec2 pos, glm::vec2 size, float rotation) {
+        Sprite(const std::shared_ptr<Texture2D> tex, const std::shared_ptr<ShaderProgram> shader_prog, const glm::vec2& pos, const glm::vec2& size, const float rotation) {
             _tex = std::move(tex);
             _shader_prog = std::move(shader_prog);
             _size = size;
@@ -73,6 +73,9 @@ namespace Renderer  {
             glDeleteVertexArrays(1, &_VAO);
         };
 
+        Sprite(const Sprite&) = delete;
+        Sprite& operator=(const Sprite&) = delete;
+
         void render() const {
             _shader_prog->use();
 
@@ -98,19 +101,19 @@ namespace Renderer  {
             setPos(_pos + xy);
         };
 
-        void setPos(glm::vec2 pos) {
+        void setPos(const glm::vec2& pos) {
             _pos = pos;
         };
 
         glm::vec2 getPos() { return _pos; };
 
-        void setSize(glm::vec2 size) {
+        void setSize(glm::vec2& size) {
             _size = size;
         };
 
         glm::vec2 getSize() { return _size; };
 
-        void setRotation(float rotation) {
+        void setRotation(const float rotation) {
             _rotation = rotation;
         };
 

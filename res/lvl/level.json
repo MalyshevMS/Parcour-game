@@ -1,18 +1,5 @@
 {
     "sprite.size": 80,
-    "shaders": {
-        "default": {
-            "name": "DefaultShader",
-            "path.frag": "res/shaders/fragment.cfg",
-            "path.vert": "res/shaders/vertex.cfg"
-        },
-        
-        "sprite": {
-            "name": "SpriteShader",
-            "path.frag": "res/shaders/fSprite.cfg",
-            "path.vert": "res/shaders/vSprite.cfg"
-        }
-    },
     "textures": {
         "count": 3,
         "array": [
@@ -105,6 +92,27 @@
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 800, "y": 0,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 800, "y": 80,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 800, "y": 160,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 720, "y": 160,
             "rot": 0.0,
             "end": true
         }

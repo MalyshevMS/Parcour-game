@@ -45,40 +45,52 @@ using namespace std;
 
 // Eng vars
 GLenum gl_texture_mode = GL_LINEAR; // GL_LINEAR or GL_NEAREST
-string gl_sprite_shader; // Name of default sprite shader
-int gl_sprite_size = 80; // Sprite size (width and height)
+string gl_default_shader = "DefaultShader"; // Name of default shader
+string gl_sprite_shader = "SpriteShader"; // Name of default sprite shader
+vector <string> gl_default_shader_path_list = {"res/shaders/vertex.cfg", "res/shaders/fragment.cfg"}; // List of paths to default shader
+vector <string> gl_sprite_shader_path_list = {"res/shaders/vSprite.cfg", "res/shaders/fSprite.cfg"}; // List of paths to sprite shader
+int gl_sprite_size = 80;
+
+vector <string> tx_path_list = {
+    "res/textures/wall.png",
+    "res/textures/player.png",
+    "res/textures/bullet.png"
+}; // List of paths to textures
 
 float cam_x = 0; // Camera X pos
 float cam_y = 0; // Camera Y pos
 float cam_rot = 180.f; // Camera rotation
-float cam_mag = 1.f; // Camera magnifying value
-float cam_speed = 10.f; // Camera speed (x, y)
-float cam_mag_speed = 0.01f; // Camera magnifying speed
-bool cam_locked = true; // Camera lock (to player) status
+float cam_mag = 1.f;
+float cam_speed = 10.f;
+float cam_mag_speed = 0.01f;
+bool cam_locked = true;
 
 int sv_max_speed = 10; // Max player movement speed
-int sv_jump_speed = 5; // Player jump speed
-int sv_jump_height = 2 * gl_sprite_size; // Max player jump height
-int sv_gravity = 800; // (Currently unused) Gravity value
+int sv_jump_speed = 5;
+int sv_jump_height = 2 * gl_sprite_size;
+int sv_gravity = 800;
 
-int pl_x = Size.x / 2 - 40; // PLayer 1 x
-int pl_y = Size.y / 2 - 280; // Player 1 y
-int pl2_x = 0; // Player 2 x
-int pl2_y = 0; // Player 2 y
-bool pl_on_floor = true; // Is player on floor
-bool pl_is_jumping = false; // Is player jumping
-bool pl_is_spidering = false; // Is player spidering
+int pl_offset_x = 40;
+int pl_offset_y = 280;
+int pl_x = Size.x / 2 - pl_offset_x;
+int pl_y = Size.y / 2 - pl_offset_y;
+int pl2_x = 0;
+int pl2_y = 0;
+bool pl_on_floor = true;
+bool pl_is_jumping = false;
+bool pl_is_spidering = false;
+vector <glm::vec2> pl_coords;
 
-ResourceManager rm_main; // Main resource manager
+ResourceManager rm_main;
 
-TexLoader tl_textures; // Main Texture Loader
+TexLoader tl_textures;
 
-SprGroup sg_sprites; // Group for sprites (obstacles, walls and others that player will not clip through)
-SprGroup sg_player; // Group for Player 1
-SprGroup sg_player2; // Group for Player 2
-SprGroup sg_mobs; // (Unused) Group for mobs (player will atack it)
+SprGroup sg_sprites;
+SprGroup sg_player;
+SprGroup sg_mobs;
+SprGroup sg_player2;
 
-Parser pars_main; // Main level and parameter parser
+Parser pars_main;
 
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
@@ -109,6 +121,7 @@ int collides_left() {
     }
     return false;
 }
+
 
 int collides_right() {
     vector sprites_pos = sg_sprites.get_current_pos();
@@ -224,8 +237,7 @@ void keyHandler(GLFWwindow* win) {
 
 int main(int argc, char const *argv[]) {
     string comand_line;
-    
-    // Debugger console (not ready yet)
+
     #ifdef debug
         do {
             cout << "Minimal2D > ";
@@ -235,16 +247,15 @@ int main(int argc, char const *argv[]) {
         } while (comand_line != "play");
     #endif
 
-    if (!glfwInit()) { // Checking GLFW
+    if (!glfwInit()) {
         cerr << "glfwInit failed!" << endl;
         return -1;
     }
 
-    // Setting GLFW parameters
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_MAXIMIZED, 0);
+    glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
 
     #ifdef fullscreen
         GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
@@ -252,39 +263,36 @@ int main(int argc, char const *argv[]) {
         GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", nullptr, nullptr);
     #endif
 
-    if (!window) { // Checking creating window
+    if (!window) {
         cerr << "glfwCreateWindow failed!" << endl;
         glfwTerminate();
         return -1;
     }
 
-    glfwSetKeyCallback(window, onceKeyHandler); // Setting once key handler
-    glfwSetWindowSizeCallback(window, sizeHandler); // Setting size handler
+    glfwSetKeyCallback(window, onceKeyHandler);
+    glfwSetWindowSizeCallback(window, sizeHandler);
 
     glfwMakeContextCurrent(window);
 
-    if (!gladLoadGL()) { // Checking for GLAD
+    if (!gladLoadGL()) {
         cerr << "Can't load GLAD!" << endl;
     }
-
 
     #ifdef online
         WSAData wsaData;
         WORD DLLVersion = MAKEWORD(2, 1);
-        if (WSAStartup(DLLVersion, &wsaData) != 0) { // Checking for WSA
-            cout << "Can't load WSA!" << endl;
-            return -1;
+        if (WSAStartup(DLLVersion, &wsaData) != 0) {
+            std::cout << "Error" << std::endl;
+        	return -1;
         }
     #endif
-    
-    // Displaying Render and OpenGL info
+
     cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
     cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
 
-    glClearColor(0.19f, 0.61f, 0.61f, 1.f); // Background color
+    glClearColor(0.19f, 0.61f, 0.61f, 1.f);
 
     {
-        // Loading Resource Managers, Groups and etc.
         rm_main = ResourceManager(argv[0]);
         tl_textures = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
@@ -292,29 +300,50 @@ int main(int argc, char const *argv[]) {
         sg_player2 = SprGroup(&rm_main);
         sg_mobs = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_textures, &sg_sprites);
-        
-        std::shared_ptr<Renderer::ShaderProgram> default_shader;
-        std::shared_ptr<Renderer::ShaderProgram> sprite_shader;
 
-        sg_player.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y); // Adding sprites to player 1
-        sg_player2.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y); // Adding sprites to player 2
+        auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
 
-        string servercfg = rm_main.getFileStr("server.cfg"); // "server.cfg" string
-        string ip = servercfg.substr(0, servercfg.find_first_of(':')); // Server IP
-        unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str()); // Server port
-        
+        if (!defaultShaderProgram) {
+            cerr << "Can't create shader program!" << endl;
+            return -1;
+        }
+
+        auto spriteShaderProgram = rm_main.loadShaders(gl_sprite_shader, gl_sprite_shader_path_list[0], gl_sprite_shader_path_list[1]);
+
+        if (!spriteShaderProgram) {
+            cerr << "Can't create SpriteShader" << endl;
+            return -1;
+        }
+
+        tl_textures.add_texture("Wall", tx_path_list[0]);
+        tl_textures.add_texture("Player", tx_path_list[1]);
+        tl_textures.add_texture("Bullet", tx_path_list[2]);
+
+        defaultShaderProgram->use();
+        defaultShaderProgram->setInt("tex", 0);
+
+        spriteShaderProgram->use();
+        spriteShaderProgram->setInt("tex", 0);
+
+        pars_main.parse_lvl("res/lvl/level.json");
+
+        sg_player.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y);
+
         #ifdef online
-            Client cli(ip, port); // Adding client
+            sg_player2.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y);
+
+            string servercfg = rm_main.getFileStr("server.cfg");
+            string ip = servercfg.substr(0, servercfg.find_first_of(':'));
+            unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
+            
+            Client cli(ip, port);
         #endif
 
-        pars_main.parse_lvl("res/lvl/level.json", &gl_sprite_size, &default_shader, &sprite_shader); // Parsing level
-        
-        while (!glfwWindowShouldClose(window)) { // Main game loop
+        while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT);
 
-            keyHandler(window); // Setting key handler
+            keyHandler(window);
 
-            // Projection Matrix parameters
             float projMat_right  = Size.x * cam_mag + cam_x;
             float projMat_top    = Size.y * cam_mag + cam_y;
             float projMat_left   = - Size.x * (cam_mag - 1) + cam_x;
@@ -322,10 +351,10 @@ int main(int argc, char const *argv[]) {
 
             glm::mat4 projMat = glm::ortho(projMat_left, projMat_right, projMat_bottom, projMat_top, -100.f, 100.f);
 
-            default_shader->setMat4("projMat", projMat);
-            sprite_shader->setMat4("projMat", projMat);
+            defaultShaderProgram->setMat4("projMat", projMat);
+            spriteShaderProgram->setMat4("projMat", projMat);
 
-            default_shader->use();
+            defaultShaderProgram->use();
             tl_textures.bind_all();
 
             #ifdef online
