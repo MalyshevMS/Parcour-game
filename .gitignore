@@ -3,3 +3,4 @@
 *.o
 build/
 res/textures/Thumbs.db
+release.md
