@@ -122,7 +122,6 @@ int collides_left() {
     return false;
 }
 
-
 int collides_right() {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
@@ -138,12 +137,12 @@ void jump() {
         pl_on_floor = false;
         while (pl_y < height && !collides_ceiling()) {
             pl_y += sv_jump_speed;
-            sleep(1);
+            sleep(10);
         }
 
         while (!collides_floor() && pl_y > 0 && !pl_is_spidering) {
             pl_y -= sv_jump_speed;
-            sleep(1);
+            sleep(10);
         }
         pl_on_floor = true;
         pl_is_jumping = false;
@@ -164,8 +163,8 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
         cam_locked ? cam_locked = false : cam_locked = true;
     }
 
-    if (key == KEY_G && action == GLFW_PRESS) {
-        cout << "(" << pl2_x << ", " << pl2_y << ")" << endl;
+    if (key == KEY_Q && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(win, GL_TRUE);
     }
 }
 
@@ -205,11 +204,11 @@ void keyHandler(GLFWwindow* win) {
         pl_is_spidering = true;
     } else pl_is_spidering = false;
 
-    if (glfwGetKey(win, KEY_EQUAL) == GLFW_PRESS && cam_mag - cam_mag_speed >= 2.f) {
+    if (glfwGetKey(win, KEY_0) == GLFW_PRESS) {
         cam_mag -= cam_mag_speed;
     }
 
-    if (glfwGetKey(win, KEY_MINUS) == GLFW_PRESS) {
+    if (glfwGetKey(win, KEY_9) == GLFW_PRESS) {
         cam_mag += cam_mag_speed;
     }
 
