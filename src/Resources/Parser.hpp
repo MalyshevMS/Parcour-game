@@ -17,11 +17,13 @@ public:
         this->sg = sg;
     };
 
-    void parse_lvl(std::string path) {
+    void parse_lvl(std::string path, int* spr_size) {
         std::fstream f;
         f.open(rm->getExePath() + path);
         json file;
         f >> file;
+
+        *spr_size = file["sprite.size"];
         
         int tex_count = file["textures"]["count"];
         json tex_arr = file["textures"]["array"];
@@ -35,10 +37,8 @@ public:
         for (int i = 0;; i++) {
             json _elem = lvl[i];
             bool _end = _elem["end"];
-            sg->add_sprite(_elem["tex"], "SpriteShader", _elem["size.x"], _elem["size.y"], _elem["rot"], _elem["x"], _elem["y"]);
-            if (_end == true) {
-                break;
-            }
+            sg->add_sprite(_elem["tex"], "SpriteShader", *spr_size, *spr_size, _elem["rot"], _elem["x"], _elem["y"]);
+            if (_end == true) break;
         }
     };
 };
