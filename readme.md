@@ -32,5 +32,5 @@ cd build
 cmake .. 
 cmake --build . 
 ```
- - Open binary by path \build\bin\M2_engine (GNU/Linux) or \build\bin\Debug\M2_engine (Win32).
- - **CONGRATULATIONS!** You have started the engine!
+ - Open binary by path \build\bin\Parcour-game (GNU/Linux) or \build\bin\Debug\Parcour-game (Win32).
+ - **CONGRATULATIONS!** You have started the game!
