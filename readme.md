@@ -4,6 +4,7 @@
  - [Install a dedicated server](#installing-a-dedicated-server)
  - [Connect to a dedicated server](#installing-a-dedicated-server)
  - [Engine source code](https://github.com/MalyshevMS/M2-engine)
+ - [Latest release](https://github.com/MalyshevMS/Parcour-game/releases/tag/v1.0.0)
 
 This is a simply minimalistic 2D game about parkour.
 
