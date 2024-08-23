@@ -16,6 +16,7 @@
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
 #include "Resources/Parser.hpp"
+#include "Other/KeyHandler.hpp"
 
 #ifdef online
     #include "Online/Client.hpp"
@@ -78,13 +79,15 @@ bool pl_noclip = false;
 
 ResourceManager rm_main; // Main Resource manager
 
-TexLoader tl_textures; // Main Texture loader
+TexLoader tl_main; // Main Texture loader
 
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
 SprGroup sg_player; // Group for Player 1
 SprGroup sg_player2; // Group for Player 2
 
 Parser pars_main; // Main parser
+
+KeyHandler kh_main;
 
 float __ticks;
 float __ticks2;
@@ -164,16 +167,6 @@ bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
     return false;
 }
 
-void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
-    if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
-        cam_locked ? cam_locked = false : cam_locked = true;
-    }
-
-    if (key == KEY_Q && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(win, GL_TRUE);
-    }
-}
-
 void fall() {
     if (!collides_floor() && !collides_floor(0) && !pl_spidering && !pl_jumping && pl_y > 0) {
         if (g(__ticks) < sv_max_speed) pl_y -= g(__ticks);
@@ -184,6 +177,16 @@ void fall() {
 
 void detect_fail() {
 
+}
+
+void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
+    if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
+        cam_locked ? cam_locked = false : cam_locked = true;
+    }
+
+    if (key == KEY_Q && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(win, GL_TRUE);
+    }
 }
 
 void keyHandler(GLFWwindow* win) {
@@ -204,46 +207,6 @@ void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_PRESS) {
         sv_max_speed = 5;
     } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv_max_speed = 10;
-
-    if (glfwGetKey(win, KEY_SPACE) == GLFW_PRESS) {
-        if (!pl_jumping) {
-            std::thread t(jump);
-            t.detach();
-        }
-    }
-
-    if (glfwGetKey(win, KEY_W) == GLFW_PRESS && collides_ceiling()) {
-        pl_spidering = true;
-    } else pl_spidering = false;
-
-    if (glfwGetKey(win, KEY_0) == GLFW_PRESS) {
-        cam_mag -= cam_mag_speed;
-    }
-
-    if (glfwGetKey(win, KEY_9) == GLFW_PRESS) {
-        cam_mag += cam_mag_speed;
-    }
-
-    if (glfwGetKey(win, KEY_UP) == GLFW_PRESS) {
-        cam_y += cam_speed;
-    }
-
-    if (glfwGetKey(win, KEY_DOWN) == GLFW_PRESS) {
-        cam_y -= cam_speed;
-    }
-
-    if (glfwGetKey(win, KEY_RIGHT) == GLFW_PRESS) {
-        cam_x += cam_speed;
-    }
-
-    if (glfwGetKey(win, KEY_LEFT) == GLFW_PRESS) {
-        cam_x -= cam_speed;
-    }
-
-    if (glfwGetKey(win, KEY_F1) == GLFW_PRESS) {
-        cam_x = 0;
-        cam_y = 0;
-    }
 }
 
 int main(int argc, char const *argv[]) {
@@ -320,11 +283,12 @@ int main(int argc, char const *argv[]) {
 
     {
         rm_main = ResourceManager(argv[0]); // Binding all classes together
-        tl_textures = TexLoader(&rm_main);
+        tl_main = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
         sg_player = SprGroup(&rm_main);
         sg_player2 = SprGroup(&rm_main);
-        pars_main = Parser(&rm_main, &tl_textures, &sg_sprites);
+        pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
+        kh_main = KeyHandler(window);
 
         // Creating and checking for default shader
         auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
@@ -363,10 +327,22 @@ int main(int argc, char const *argv[]) {
             Client cli(ip, port); // Creating client
         #endif
 
+        // Binding keys (some functions are still in older Key Handler)
+        kh_main.bind(KEY_SPACE, [](){ if (!pl_jumping) { std::thread t(jump); t.detach(); } });
+        kh_main.bind('W', [](){ if (collides_ceiling()) pl_spidering = true; }, [](){ pl_spidering = false; });
+        kh_main.bind('0', [](){ cam_mag -= cam_mag_speed; });
+        kh_main.bind('9', [](){ cam_mag += cam_mag_speed; });
+        kh_main.bind(KEY_UP, [](){ cam_y += cam_speed; });
+        kh_main.bind(KEY_DOWN, [](){ cam_y -= cam_speed; });
+        kh_main.bind(KEY_RIGHT, [](){ cam_x += cam_speed; });
+        kh_main.bind(KEY_LEFT, [](){ cam_x -= cam_speed; });
+        kh_main.bind(KEY_F1, [](){ cam_x = 0; cam_y = 0; });
+
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
             keyHandler(window); // Setting key handler
+            kh_main.use();
 
             // Projection matrix variables
             float projMat_right  = Size.x * cam_mag + cam_x;
@@ -381,7 +357,7 @@ int main(int argc, char const *argv[]) {
             spriteShaderProgram->setMat4("projMat", projMat);
 
             defaultShaderProgram->use(); // Using default shader
-            tl_textures.bind_all(); // Binding all textures
+            tl_main.bind_all(); // Binding all textures
 
             #ifdef online // Sending and recieving position
                 cli.send_msg(to_string(pl_x) + "/" + to_string(pl_y) + ";");
