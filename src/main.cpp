@@ -1,5 +1,5 @@
 // #define debug
-#define fullscreen
+// #define fullscreen
 // #define online
 
 #include <glad/glad.h> // OpenGL libs
@@ -66,14 +66,15 @@ bool cam_locked = true; // Camera lock (to player) flag
 int sv_max_speed = 10; // Max player movement speed
 int sv_jump_speed = 5; // Player(s) jump speed
 int sv_jump_height = 160; // Max player jump height
+float sv_gravity = 9.80665f;
 
-int pl_x = Size.x / 2 - 40; // Player 1 X
-int pl_y = Size.y / 2 - 280; // Player 1 Y
+int pl_x = 0; // Player 1 X
+int pl_y = 80; // Player 1 Y
 int pl2_x = 0; // Player 2 X
 int pl2_y = 0; // Player 2 Y
-bool pl_on_floor = true; // Player on floor flag
 bool pl_jumping = false; // Player jumping flag
 bool pl_spidering = false; // Player spider mode flag
+bool pl_noclip = false;
 
 ResourceManager rm_main; // Main Resource manager
 
@@ -85,60 +86,72 @@ SprGroup sg_player2; // Group for Player 2
 
 Parser pars_main; // Main parser
 
+float __ticks;
+float __ticks2;
+
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
     Size.y = height;
     glViewport(0, 0, Size.x, Size.y);
 }
 
-bool collides_floor() {
+bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
+    if (pl_y <= 0) return true;
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs(pl_y - (sprites_pos[i].y + gl_sprite_size)) <= 0.f && abs(pl_x - sprites_pos[i].x) < gl_sprite_size) return true;
+        if (pl_y - (sprites_pos[i].y + gl_sprite_size) <= -epsilon && abs(pl_x - sprites_pos[i].x) < gl_sprite_size - epsilon2) return true;
     }
     return false;
 }
 
-bool collides_ceiling() {
+bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl_y + gl_sprite_size) - sprites_pos[i].y) <= 0.1f && abs(pl_x - sprites_pos[i].x) < gl_sprite_size) return true;
+        if (abs((pl_y + gl_sprite_size) - sprites_pos[i].y) <= -epsilon && abs(pl_x - sprites_pos[i].x) < gl_sprite_size - epsilon2) return true;
     }
     return false;
 }
 
-int collides_left() {
+bool collides_left(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs(pl_x - (sprites_pos[i].x + gl_sprite_size)) <= 0.f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return true;
+        if (pl_x - (sprites_pos[i].x + gl_sprite_size) <= -epsilon && pl_x - (sprites_pos[i].x + gl_sprite_size) > -2 * gl_sprite_size && abs(pl_y - sprites_pos[i].y) < gl_sprite_size - epsilon2) return true;
     }
     return false;
 }
 
-int collides_right() {
+bool collides_right(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= 0.f && abs(pl_y - sprites_pos[i].y) < gl_sprite_size) return true;
+        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= -epsilon && abs(pl_y - sprites_pos[i].y) < gl_sprite_size - epsilon2) return true;
     }
     return false;
 }
+
+void prevent_clipping() {
+    if (!pl_noclip) {
+        if (collides_floor(1) && !collides_ceiling()) pl_y++;
+        else if (collides_left(1) && !collides_right()) {
+            pl_x += gl_sprite_size / 2;
+            cam_x += gl_sprite_size / 2;
+        }
+    }
+}
+
+auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * sv_gravity; };
 
 void jump() {
-    if (pl_on_floor && !collides_ceiling()) {
+    if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
+        __ticks2 = 0.f;
         int height = pl_y + sv_jump_height;
         pl_jumping = true;
-        pl_on_floor = false;
         while (pl_y < height && !collides_ceiling()) {
-            pl_y += sv_jump_speed;
-            sleep(10);
+            pl_y += -g(__ticks2) + sv_gravity;
+            __ticks2++;
+            sleep(1);
         }
-
-        while (!collides_floor() && pl_y > 0 && !pl_spidering) {
-            pl_y -= sv_jump_speed;
-            sleep(10);
-        }
-        pl_on_floor = true;
         pl_jumping = false;
+        __ticks2 = 0;
     }
 }
 
@@ -162,7 +175,11 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
 }
 
 void fall() {
-    if (!collides_floor() && !pl_spidering && !pl_jumping && pl_y > 0) pl_y -= sv_jump_speed;
+    if (!collides_floor() && !collides_floor(0) && !pl_spidering && !pl_jumping && pl_y > 0) {
+        if (g(__ticks) < sv_max_speed) pl_y -= g(__ticks);
+        else pl_y -= sv_max_speed;
+        __ticks++;
+    } else __ticks = 0;
 }
 
 void detect_fail() {
@@ -170,12 +187,12 @@ void detect_fail() {
 }
 
 void keyHandler(GLFWwindow* win) {
-    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && !collides_left()) {
+    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl_noclip ? true : !collides_left())) {
         pl_x -= sv_max_speed;
         if (cam_locked) cam_x -= sv_max_speed;
     }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && !collides_right()) {
+    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl_noclip ? true : !collides_right())) {
         pl_x += sv_max_speed;
         if (cam_locked) cam_x += sv_max_speed;
     }
@@ -189,8 +206,10 @@ void keyHandler(GLFWwindow* win) {
     } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv_max_speed = 10;
 
     if (glfwGetKey(win, KEY_SPACE) == GLFW_PRESS) {
-        std::thread t(jump);
-        t.detach();
+        if (!pl_jumping) {
+            std::thread t(jump);
+            t.detach();
+        }
     }
 
     if (glfwGetKey(win, KEY_W) == GLFW_PRESS && collides_ceiling()) {
@@ -372,6 +391,7 @@ int main(int argc, char const *argv[]) {
             #endif
 
             fall(); // Always falling down
+            prevent_clipping();
 
             sg_player.rotate_all(180 - cam_rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl_x, pl_y); // Setting position (Player 1)
