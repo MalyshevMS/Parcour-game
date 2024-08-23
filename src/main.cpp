@@ -18,6 +18,11 @@
 #include "Resources/Parser.hpp"
 #include "Other/KeyHandler.hpp"
 
+#include "Variables/OpenGL.hpp" // variables
+#include "Variables/Camera.hpp"
+#include "Variables/Server.hpp"
+#include "Variables/Player.hpp"
+
 #ifdef online
     #include "Online/Client.hpp"
 #endif
@@ -45,37 +50,11 @@ using namespace std;
 #endif
 
 // Engine vars
-GLenum gl_texture_mode = GL_LINEAR; // GL_LINEAR or GL_NEAREST
-string gl_default_shader = "DefaultShader"; // Name of default shader
-string gl_sprite_shader = "SpriteShader"; // Name of default sprite shader
-string gl_default_shader_path_list[] = {
-    "res/shaders/vertex.cfg", "res/shaders/fragment.cfg"
-}; // List of paths to default shader
-string gl_sprite_shader_path_list[] = {
-    "res/shaders/vSprite.cfg", "res/shaders/fSprite.cfg"
-}; // List of paths to sprite shader
-int gl_sprite_size = 80; // Default size of a sprite
-
-float cam_x = 0; // Camera X pos
-float cam_y = 0; // Camera Y pos
-float cam_rot = 180.f; // Camera rotation
-float cam_mag = 1.f; // Current camera magnifying
-float cam_speed = 10.f; // Camera movement speed
-float cam_mag_speed = 0.01f; // Camera magnifying speed
-bool cam_locked = true; // Camera lock (to player) flag
-
-int sv_max_speed = 10; // Max player movement speed
-int sv_jump_speed = 5; // Player(s) jump speed
-int sv_jump_height = 160; // Max player jump height
-float sv_gravity = 9.80665f;
-
-int pl_x = 0; // Player 1 X
-int pl_y = 80; // Player 1 Y
-int pl2_x = 0; // Player 2 X
-int pl2_y = 0; // Player 2 Y
-bool pl_jumping = false; // Player jumping flag
-bool pl_spidering = false; // Player spider mode flag
-bool pl_noclip = false;
+OpenGL gl;
+Camera cam;
+Server sv;
+Player pl;
+Player pl2;
 
 ResourceManager rm_main; // Main Resource manager
 
@@ -99,10 +78,10 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
 }
 
 bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
-    if (pl_y <= 0) return true;
+    if (pl.y <= 0) return true;
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (pl_y - (sprites_pos[i].y + gl_sprite_size) <= -epsilon && abs(pl_x - sprites_pos[i].x) < gl_sprite_size - epsilon2) return true;
+        if (pl.y - (sprites_pos[i].y + gl.sprite_size) <= -epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -110,7 +89,7 @@ bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
 bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl_y + gl_sprite_size) - sprites_pos[i].y) <= -epsilon && abs(pl_x - sprites_pos[i].x) < gl_sprite_size - epsilon2) return true;
+        if (abs((pl.y + gl.sprite_size) - sprites_pos[i].y) <= -epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -118,7 +97,7 @@ bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
 bool collides_left(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (pl_x - (sprites_pos[i].x + gl_sprite_size) <= -epsilon && pl_x - (sprites_pos[i].x + gl_sprite_size) > -2 * gl_sprite_size && abs(pl_y - sprites_pos[i].y) < gl_sprite_size - epsilon2) return true;
+        if (pl.x - (sprites_pos[i].x + gl.sprite_size) <= -epsilon && pl.x - (sprites_pos[i].x + gl.sprite_size) > -2 * gl.sprite_size && abs(pl.y - sprites_pos[i].y) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -126,34 +105,34 @@ bool collides_left(int epsilon = 0, int epsilon2 = 2) {
 bool collides_right(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl_x + gl_sprite_size) - sprites_pos[i].x) <= -epsilon && abs(pl_y - sprites_pos[i].y) < gl_sprite_size - epsilon2) return true;
+        if (abs((pl.x + gl.sprite_size) - sprites_pos[i].x) <= -epsilon && abs(pl.y - sprites_pos[i].y) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
 
 void prevent_clipping() {
-    if (!pl_noclip) {
-        if (collides_floor(1) && !collides_ceiling()) pl_y++;
+    if (!pl.noclip) {
+        if (collides_floor(1) && !collides_ceiling()) pl.y++;
         else if (collides_left(1) && !collides_right()) {
-            pl_x += gl_sprite_size / 2;
-            cam_x += gl_sprite_size / 2;
+            pl.x += gl.sprite_size / 2;
+            cam.x += gl.sprite_size / 2;
         }
     }
 }
 
-auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * sv_gravity; };
+auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * sv.gravity; };
 
 void jump() {
     if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
         __ticks2 = 0.f;
-        int height = pl_y + sv_jump_height;
-        pl_jumping = true;
-        while (pl_y < height && !collides_ceiling()) {
-            pl_y += -g(__ticks2) + sv_gravity;
+        int height = pl.y + sv.jump_height;
+        pl.jumping = true;
+        while (pl.y < height && !collides_ceiling()) {
+            pl.y += -g(__ticks2) + sv.gravity;
             __ticks2++;
             sleep(1);
         }
-        pl_jumping = false;
+        pl.jumping = false;
         __ticks2 = 0;
     }
 }
@@ -161,16 +140,16 @@ void jump() {
 bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
     for (auto i : sg1.get_current_pos()) {
         for (auto j : sg2.get_current_pos()) {
-            if (abs(i.x - j.x) <= gl_sprite_size && abs(i.y - j.y) <= gl_sprite_size) return true;
+            if (abs(i.x - j.x) <= gl.sprite_size && abs(i.y - j.y) <= gl.sprite_size) return true;
         }
     }
     return false;
 }
 
 void fall() {
-    if (!collides_floor() && !collides_floor(0) && !pl_spidering && !pl_jumping && pl_y > 0) {
-        if (g(__ticks) < sv_max_speed) pl_y -= g(__ticks);
-        else pl_y -= sv_max_speed;
+    if (!collides_floor() && !collides_floor(0) && !pl.spidering && !pl.jumping && pl.y > 0) {
+        if (g(__ticks) < sv.max_speed) pl.y -= g(__ticks);
+        else pl.y -= sv.max_speed;
         __ticks++;
     } else __ticks = 0;
 }
@@ -181,7 +160,7 @@ void detect_fail() {
 
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
-        cam_locked ? cam_locked = false : cam_locked = true;
+        cam.locked ? cam.locked = false : cam.locked = true;
     }
 
     if (key == KEY_Q && action == GLFW_PRESS) {
@@ -189,31 +168,60 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     }
 
     if(key == KEY_B && action == GLFW_PRESS) {
-        pl_noclip ? pl_noclip = false : pl_noclip = true;
+        pl.noclip ? pl.noclip = false : pl.noclip = true;
     }
 }
 
 void keyHandler(GLFWwindow* win) {
-    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl_noclip ? true : !collides_left())) {
-        pl_x -= sv_max_speed;
-        if (cam_locked) cam_x -= sv_max_speed;
+    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
+        pl.x -= sv.max_speed;
+        if (cam.locked) cam.x -= sv.max_speed;
     }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl_noclip ? true : !collides_right())) {
-        pl_x += sv_max_speed;
-        if (cam_locked) cam_x += sv_max_speed;
+    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
+        pl.x += sv.max_speed;
+        if (cam.locked) cam.x += sv.max_speed;
     }
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        sv_max_speed = 20;
-    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) sv_max_speed = 10;
+        sv.max_speed = 20;
+    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) sv.max_speed = 10;
 
     if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        sv_max_speed = 5;
-    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv_max_speed = 10;
+        sv.max_speed = 5;
+    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv.max_speed = 10;
 }
 
 int main(int argc, char const *argv[]) {
+    gl.texture_mode = GL_LINEAR;
+    gl.default_shader = "DefaultShader";
+    gl.sprite_shader = "SpriteShader";
+    gl.default_shader_path_list; // Please change this value inside of the structure
+    gl.sprite_shader_path_list; // Please change this value inside of the structure
+    gl.sprite_size = 80;
+
+    cam.x = 0;
+    cam.y = 0;
+    cam.rot = 180.f;
+    cam.mag = 1.f;
+    cam.speed = 10.f;
+    cam.mag_speed = 0.01f;
+    cam.locked = true;
+
+    sv.max_speed = 10;
+    sv.jump_speed = 5;
+    sv.jump_height = 160;
+    sv.gravity = 9.80665f;
+
+    pl.x = 0;
+    pl.y = 80;
+    pl2.x = 0;
+    pl2.y = 0;
+    pl.jumping = false;
+    pl.spidering = false;
+    pl.noclip = false;
+
+
     if (argc >= 2 && argv[1] == "-res") {
         if (argc < 3) {
             cerr << "Using: -res widthxheight" << endl;
@@ -223,8 +231,8 @@ int main(int argc, char const *argv[]) {
             Size.x = stoi(res.substr(0, res.find_first_of('x')));
             Size.y = stoi(res.substr(res.find_first_of('x') + 1));
 
-            pl_x = Size.x / 2 - 40;
-            pl_y = Size.y / 2 - 280;
+            pl.x = Size.x / 2 - 40;
+            pl.y = Size.y / 2 - 280;
         }
     }
 
@@ -295,14 +303,14 @@ int main(int argc, char const *argv[]) {
         kh_main = KeyHandler(window);
 
         // Creating and checking for default shader
-        auto defaultShaderProgram = rm_main.loadShaders(gl_default_shader, gl_default_shader_path_list[0], gl_default_shader_path_list[1]);
+        auto defaultShaderProgram = rm_main.loadShaders(gl.default_shader, gl.default_shader_path_list[0], gl.default_shader_path_list[1]);
         if (!defaultShaderProgram) {
             cerr << "Can't create shader program!" << endl;
             return -1;
         }
 
         // Creating and checking for sprite shader
-        auto spriteShaderProgram = rm_main.loadShaders(gl_sprite_shader, gl_sprite_shader_path_list[0], gl_sprite_shader_path_list[1]);
+        auto spriteShaderProgram = rm_main.loadShaders(gl.sprite_shader, gl.sprite_shader_path_list[0], gl.sprite_shader_path_list[1]);
         if (!spriteShaderProgram) {
             cerr << "Can't create SpriteShader" << endl;
             return -1;
@@ -316,12 +324,12 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
 
-        pars_main.parse_lvl("res/lvl/level.json", &gl_sprite_size); // Parsing level
+        pars_main.parse_lvl("res/lvl/level.json", &gl.sprite_size); // Parsing level
 
-        sg_player.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl_x, pl_y); // Adding Player 1 sprite
+        sg_player.add_sprite("Player", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl.x, pl.y); // Adding Player 1 sprite
 
         #ifdef online
-            sg_player2.add_sprite("Player", gl_sprite_shader, gl_sprite_size, gl_sprite_size, 0.f, pl2_x, pl2_y); // Adding Player 2 sprite
+            sg_player2.add_sprite("Player", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.x, pl2.y); // Adding Player 2 sprite
 
             // Parsing serffer.cfg
             string servercfg = rm_main.getFileStr("server.cfg");
@@ -332,15 +340,15 @@ int main(int argc, char const *argv[]) {
         #endif
 
         // Binding keys (some functions are still in older Key Handler)
-        kh_main.bind(KEY_SPACE, [](){ if (!pl_jumping) { std::thread t(jump); t.detach(); } });
-        kh_main.bind('W', [](){ if (collides_ceiling()) pl_spidering = true; }, [](){ pl_spidering = false; });
-        kh_main.bind('0', [](){ cam_mag -= cam_mag_speed; });
-        kh_main.bind('9', [](){ cam_mag += cam_mag_speed; });
-        kh_main.bind(KEY_UP, [](){ cam_y += cam_speed; });
-        kh_main.bind(KEY_DOWN, [](){ cam_y -= cam_speed; });
-        kh_main.bind(KEY_RIGHT, [](){ cam_x += cam_speed; });
-        kh_main.bind(KEY_LEFT, [](){ cam_x -= cam_speed; });
-        kh_main.bind(KEY_F1, [](){ cam_x = 0; cam_y = 0; });
+        kh_main.bind(KEY_SPACE, [](){ if (!pl.jumping) { std::thread t(jump); t.detach(); } });
+        kh_main.bind('W', [](){ if (collides_ceiling()) pl.spidering = true; }, [](){ pl.spidering = false; });
+        kh_main.bind('0', [](){ cam.mag -= cam.mag_speed; });
+        kh_main.bind('9', [](){ cam.mag += cam.mag_speed; });
+        kh_main.bind(KEY_UP, [](){ cam.y += cam.speed; });
+        kh_main.bind(KEY_DOWN, [](){ cam.y -= cam.speed; });
+        kh_main.bind(KEY_RIGHT, [](){ cam.x += cam.speed; });
+        kh_main.bind(KEY_LEFT, [](){ cam.x -= cam.speed; });
+        kh_main.bind(KEY_F1, [](){ cam.x = 0; cam.y = 0; });
 
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
@@ -349,10 +357,10 @@ int main(int argc, char const *argv[]) {
             kh_main.use(); // Setting (new) key handler
 
             // Projection matrix variables
-            float projMat_right  = Size.x * cam_mag + cam_x;
-            float projMat_top    = Size.y * cam_mag + cam_y;
-            float projMat_left   = - Size.x * (cam_mag - 1) + cam_x;
-            float projMat_bottom = - Size.y * (cam_mag - 1) + cam_y;
+            float projMat_right  = Size.x * cam.mag + cam.x;
+            float projMat_top    = Size.y * cam.mag + cam.y;
+            float projMat_left   = - Size.x * (cam.mag - 1) + cam.x;
+            float projMat_bottom = - Size.y * (cam.mag - 1) + cam.y;
 
             glm::mat4 projMat = glm::ortho(projMat_left, projMat_right, projMat_bottom, projMat_top, -100.f, 100.f); // Setting projection matrix
 
@@ -364,20 +372,20 @@ int main(int argc, char const *argv[]) {
             tl_main.bind_all(); // Binding all textures
 
             #ifdef online // Sending and recieving position
-                cli.send_msg(to_string(pl_x) + "/" + to_string(pl_y) + ";");
-                auto pl2_coords = cli.recv_msg();
-                pl2_x = stoi(pl2_coords.substr(0, pl2_coords.find_first_of("/")));
-                pl2_y = stoi(pl2_coords.substr(pl2_coords.find_first_of("/") + 1, pl2_coords.find_first_of(";")));
+                cli.send_msg(to_string(pl.x) + "/" + to_string(pl.y) + ";");
+                auto pl2.coords = cli.recv_msg();
+                pl2.x = stoi(pl2.coords.substr(0, pl2.coords.find_first_of("/")));
+                pl2.y = stoi(pl2.coords.substr(pl2.coords.find_first_of("/") + 1, pl2.coords.find_first_of(";")));
             #endif
 
             fall(); // Always falling down
             prevent_clipping(); // Prevent player from clipping through walls
 
-            sg_player.rotate_all(180 - cam_rot); // Setting rotation (Player 1)
-            sg_player.set_pos(pl_x, pl_y); // Setting position (Player 1)
+            sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
+            sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
 
-            sg_player2.rotate_all(180 - cam_rot); // Setting rotation (Player 2)
-            sg_player2.set_pos(pl2_x, pl2_y); // Setting position (Player 2)
+            sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
+            sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
 
             // Rendering all sprites
             sg_sprites.render_all();
