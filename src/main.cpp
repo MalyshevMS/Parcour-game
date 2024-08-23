@@ -87,7 +87,7 @@ SprGroup sg_player2; // Group for Player 2
 
 Parser pars_main; // Main parser
 
-KeyHandler kh_main;
+KeyHandler kh_main; // Main Key Handler
 
 float __ticks;
 float __ticks2;
@@ -186,6 +186,10 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
 
     if (key == KEY_Q && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(win, GL_TRUE);
+    }
+
+    if(key == KEY_B && action == GLFW_PRESS) {
+        pl_noclip ? pl_noclip = false : pl_noclip = true;
     }
 }
 
@@ -341,8 +345,8 @@ int main(int argc, char const *argv[]) {
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
-            keyHandler(window); // Setting key handler
-            kh_main.use();
+            keyHandler(window); // Setting (old) key handler
+            kh_main.use(); // Setting (new) key handler
 
             // Projection matrix variables
             float projMat_right  = Size.x * cam_mag + cam_x;
@@ -367,7 +371,7 @@ int main(int argc, char const *argv[]) {
             #endif
 
             fall(); // Always falling down
-            prevent_clipping();
+            prevent_clipping(); // Prevent player from clipping through walls
 
             sg_player.rotate_all(180 - cam_rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl_x, pl_y); // Setting position (Player 1)
