@@ -37,7 +37,7 @@ public:
         for (int i = 0;; i++) {
             json _elem = lvl[i];
             bool _end = _elem["end"];
-            sg->add_sprite(_elem["tex"], "SpriteShader", *spr_size, *spr_size, _elem["rot"], _elem["x"], _elem["y"]);
+            sg->add_sprite(_elem["tex"], "default", "SpriteShader", *spr_size, *spr_size, _elem["rot"], _elem["x"], _elem["y"]);
             if (_end == true) break;
         }
     };

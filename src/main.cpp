@@ -12,9 +12,11 @@
 #include "Renderer/ShaderProgram.hpp" // my libs
 #include "Renderer/Texture2D.hpp"
 #include "Renderer/Sprite.hpp"
+#include "Renderer/AnimatedSprite.hpp"
 #include "Resources/ResourceManager.hpp"
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
+#include "Resources/AnimSpriteGroup.hpp"
 #include "Resources/Parser.hpp"
 #include "Other/KeyHandler.hpp"
 
@@ -42,6 +44,7 @@
 #endif
 
 using namespace std;
+using DPair = pair<string, uint64_t>;
 
 #ifndef fullscreen
     glm::ivec2 Size(1280, 720);
@@ -49,7 +52,6 @@ using namespace std;
     glm::ivec2 Size(3840, 2160);
 #endif
 
-// Engine vars
 OpenGL gl;
 Camera cam;
 Server sv;
@@ -61,8 +63,8 @@ ResourceManager rm_main; // Main Resource manager
 TexLoader tl_main; // Main Texture loader
 
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
-SprGroup sg_player; // Group for Player 1
-SprGroup sg_player2; // Group for Player 2
+AnimSprGroup sg_player; // Group for Player 1
+AnimSprGroup sg_player2; // Group for Player 2
 
 Parser pars_main; // Main parser
 
@@ -124,6 +126,10 @@ auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * s
 
 void jump() {
     if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
+        switch (pl.look) {
+            case l_left: { sg_player.set_animation(0, "jleft"); break; }
+            case l_right: { sg_player.set_animation(0, "jright"); break; }
+        }
         __ticks2 = 0.f;
         int height = pl.y + sv.jump_height;
         pl.jumping = true;
@@ -172,15 +178,34 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     }
 }
 
+void set_stand_anim() {
+    if (!pl.moving && !pl.jumping) {
+        switch (pl.look) {
+            case l_left: { sg_player.set_animation(0, "stand_left"); break; }
+            case l_right: { sg_player.set_animation(0, "stand_right"); break; }
+        }
+    }
+}
+
 void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
+        pl.moving = true;
+        pl.look = l_left;
+        sg_player.set_animation(0, "mleft");
         pl.x -= sv.max_speed;
         if (cam.locked) cam.x -= sv.max_speed;
     }
 
     if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
+        pl.moving = true;
+        pl.look = l_right;
+        sg_player.set_animation(0, "mright");
         pl.x += sv.max_speed;
         if (cam.locked) cam.x += sv.max_speed;
+    }
+
+    if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
+        pl.moving = false;
     }
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
@@ -193,6 +218,7 @@ void keyHandler(GLFWwindow* win) {
 }
 
 int main(int argc, char const *argv[]) {
+    // Engine vars
     gl.texture_mode = GL_LINEAR;
     gl.default_shader = "DefaultShader";
     gl.sprite_shader = "SpriteShader";
@@ -200,8 +226,8 @@ int main(int argc, char const *argv[]) {
     gl.sprite_shader_path_list; // Please change this value inside of the structure
     gl.sprite_size = 80;
 
-    cam.x = 0;
-    cam.y = 0;
+    cam.x = pl.x - Size.x / 2;
+    cam.y = pl.y - gl.sprite_size;
     cam.rot = 180.f;
     cam.mag = 1.f;
     cam.speed = 10.f;
@@ -217,6 +243,8 @@ int main(int argc, char const *argv[]) {
     pl.y = 80;
     pl2.x = 0;
     pl2.y = 0;
+    pl.look = l_left;
+    pl.moving = false;
     pl.jumping = false;
     pl.spidering = false;
     pl.noclip = false;
@@ -297,8 +325,8 @@ int main(int argc, char const *argv[]) {
         rm_main = ResourceManager(argv[0]); // Binding all classes together
         tl_main = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
-        sg_player = SprGroup(&rm_main);
-        sg_player2 = SprGroup(&rm_main);
+        sg_player = AnimSprGroup(&rm_main);
+        sg_player2 = AnimSprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
         kh_main = KeyHandler(window);
 
@@ -325,13 +353,23 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->setInt("tex", 0);
 
         pars_main.parse_lvl("res/lvl/level.json", &gl.sprite_size); // Parsing level
+        tl_main.add_textures_from_atlas("Player", "res/textures/player.png", { "stand_right", "stand_left", "walk1_right", "walk1_left", "walk2_right", "walk2_left", "jump_right", "jump_left" }, glm::vec2(16, 16));
 
-        sg_player.add_sprite("Player", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl.x, pl.y); // Adding Player 1 sprite
+        sg_player.add_sprite("Player", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl.x, pl.y); // Adding Player 1 sprite
+
+        sg_player.add_animation(0, "mleft", { DPair("walk1_left", 100), DPair("walk2_left", 100) });
+        sg_player.add_animation(0, "mright", { DPair("walk1_right", 100), DPair("walk2_right", 100) });
+        sg_player.add_animation(0, "jleft", { DPair("jump_left", 700) });
+        sg_player.add_animation(0, "jright", { DPair("jump_right", 700) });
+        sg_player.add_animation(0, "stand_right", { DPair("stand_right", 1) });
+        sg_player.add_animation(0, "stand_left", { DPair("stand_left", 1) });
+
+        sg_player.set_animation(0, "stand_left");
 
         #ifdef online
             sg_player2.add_sprite("Player", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.x, pl2.y); // Adding Player 2 sprite
 
-            // Parsing serffer.cfg
+            // Parsing server.cfg
             string servercfg = rm_main.getFileStr("server.cfg");
             string ip = servercfg.substr(0, servercfg.find_first_of(':'));
             unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
@@ -348,7 +386,10 @@ int main(int argc, char const *argv[]) {
         kh_main.bind(KEY_DOWN, [](){ cam.y -= cam.speed; });
         kh_main.bind(KEY_RIGHT, [](){ cam.x += cam.speed; });
         kh_main.bind(KEY_LEFT, [](){ cam.x -= cam.speed; });
-        kh_main.bind(KEY_F1, [](){ cam.x = 0; cam.y = 0; });
+        kh_main.bind(KEY_F1, [](){ cam.x = pl.x - Size.x / 2; cam.y = pl.y - gl.sprite_size; });
+
+        sg_player.set_timer();
+        sg_player2.set_timer();
 
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
@@ -380,6 +421,7 @@ int main(int argc, char const *argv[]) {
 
             fall(); // Always falling down
             prevent_clipping(); // Prevent player from clipping through walls
+            set_stand_anim(); 
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
@@ -391,6 +433,9 @@ int main(int argc, char const *argv[]) {
             sg_sprites.render_all();
             sg_player.render_all();
             sg_player2.render_all();
+
+            sg_player.update_all();
+            sg_player2.update_all();            
 
             sleep(1); // 1ms delay
             glfwSwapBuffers(window); // Swapping front and back buffers

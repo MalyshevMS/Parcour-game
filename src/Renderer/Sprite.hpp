@@ -11,7 +11,7 @@
 
 namespace Renderer  {
     class Sprite {
-    private:
+    protected:
         std::shared_ptr<Texture2D> _tex;
         std::shared_ptr<ShaderProgram> _shader_prog;
         glm::vec2 _pos, _size;
@@ -20,7 +20,7 @@ namespace Renderer  {
         GLuint _vertexCoordsVBO;
         GLuint _texCoordsVBO;
     public:
-        Sprite(const std::shared_ptr<Texture2D> tex, const std::shared_ptr<ShaderProgram> shader_prog, const glm::vec2& pos, const glm::vec2& size, const float rotation) {
+        Sprite(const std::shared_ptr<Texture2D>& tex, const std::string& subtexture, const std::shared_ptr<ShaderProgram>& shader_prog, const glm::vec2& pos, const glm::vec2& size, const float& rotation) {
             _tex = std::move(tex);
             _shader_prog = std::move(shader_prog);
             _size = size;
@@ -37,14 +37,16 @@ namespace Renderer  {
                 0, 0
             };
 
-            const GLfloat texCoords[] {
-                0, 0,
-                0, 1,
-                1, 1,
+            auto subtex = _tex->get_subtex(std::move(subtexture));
 
-                1, 1,
-                1, 0,
-                0, 0
+            const GLfloat texCoords[] {
+                subtex.LB.x, subtex.LB.y,
+                subtex.LB.x, subtex.RT.y,
+                subtex.RT.x, subtex.RT.y,
+
+                subtex.RT.x, subtex.RT.y,
+                subtex.RT.x, subtex.LB.y,
+                subtex.LB.x, subtex.LB.y
             };
 
             glGenVertexArrays(1, &_VAO);
@@ -76,7 +78,7 @@ namespace Renderer  {
         Sprite(const Sprite&) = delete;
         Sprite& operator=(const Sprite&) = delete;
 
-        void render() const {
+        virtual void render() const {
             _shader_prog->use();
 
             glm::mat4 model(1.f);

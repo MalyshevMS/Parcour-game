@@ -16,16 +16,21 @@ public:
     };
 
     void add_texture(const std::string& name, const std::string& path, GLenum mode = GL_NEAREST) {
-        if (this->resMan->getTexture(name, true) == nullptr) {
-            this->textures.push_back(this->resMan->loadTexture(name, path, mode));
+        if (resMan->getTexture(name, true) == nullptr) {
+            textures.push_back(resMan->loadTexture(name, path, mode));
         } else {
             std::cerr << "This texture already exists!" << std::endl;
         }
     };
 
+    void add_textures_from_atlas(const std::string& name, const std::string& path, const std::initializer_list<std::string>& subtex_names, const glm::vec2& tex_size) {
+        auto atlas = resMan->loadTexAtlas(name, path, subtex_names, tex_size.x, tex_size.y);
+        textures.push_back(atlas);
+    };
+
     void bind_all() {
-        for (int i = 0; i < this->textures.size(); i++) {
-            this->textures[i]->bind();
+        for (int i = 0; i < textures.size(); i++) {
+            textures[i]->bind();
         }
     };
 };

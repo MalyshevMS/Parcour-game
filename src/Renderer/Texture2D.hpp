@@ -2,14 +2,23 @@
 
 #include <glad/glad.h>
 #include <string>
+#include <map>
 
 namespace Renderer {
     class Texture2D {
+    public: struct SubTexture2D;
     private:
         GLenum _mode;
         GLuint _ID;
         unsigned int _width, _height;
+        std::map <std::string, SubTexture2D> sub_textures;
     public:
+        struct SubTexture2D {
+            glm::vec2 LB, RT;
+            SubTexture2D(const glm::vec2& lb, const glm::vec2& rt) : LB(lb), RT(rt) {};
+            SubTexture2D() : LB(glm::vec2(0.f)), RT(glm::vec2(1.f)) {};
+        };
+
         Texture2D(const GLuint width, const GLuint height, 
         const unsigned char* data, const unsigned int channels, 
         const GLenum filter, const GLenum wrap_mode) {
@@ -75,6 +84,21 @@ namespace Renderer {
 
         void bind() const {
             glBindTexture(GL_TEXTURE_2D, _ID);
+        };
+
+        glm::vec2 get_size() { return glm::vec2(_width, _height); };
+
+        void add_subtex(const std::string& name, const glm::vec2& lb, const glm::vec2& rt) {
+            sub_textures.emplace(name, SubTexture2D(lb, rt));
+        };
+
+        const SubTexture2D& get_subtex(const std::string& name) const {
+            auto it = sub_textures.find(name);
+            if (it != sub_textures.end()) {
+                return it->second;
+            }
+            const static SubTexture2D default_;
+            return default_;
         };
     };
 } // namespace Renderer

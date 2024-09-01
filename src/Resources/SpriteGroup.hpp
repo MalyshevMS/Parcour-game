@@ -7,7 +7,6 @@
 
 #include "ResourceManager.hpp"
 #include "../Renderer/Sprite.hpp"
-#include "../maths"
 
 void sleep(unsigned int milliseconds) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
@@ -25,8 +24,8 @@ public:
         this->resMan = resMan;
     };
 
-    void add_sprite(const std::string& tex, const std::string& shader, unsigned int width, unsigned int height, float rotation, int pos_x, int pos_y) {
-        auto new_spr = this->resMan->loadSprite(tex, shader, width, height, rotation);
+    void add_sprite(const std::string& tex, const std::string& subtex, const std::string& shader, const unsigned int& width, const unsigned int& height, const float& rotation, const int& pos_x, const int& pos_y) {
+        auto new_spr = this->resMan->loadSprite(tex, subtex, shader, width, height, rotation);
         new_spr->setPos(glm::vec2(pos_x, pos_y));
 
         sprites.push_back(new_spr);

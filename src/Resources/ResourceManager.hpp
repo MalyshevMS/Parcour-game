@@ -10,6 +10,7 @@
 #include "../Renderer/ShaderProgram.hpp"
 #include "../Renderer/Texture2D.hpp"
 #include "../Renderer/Sprite.hpp"
+#include "../Renderer/AnimatedSprite.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -88,7 +89,7 @@ public:
         return nullptr; 
     };
 
-     std::shared_ptr <Renderer::Texture2D> loadTexture(const std::string& texture, const std::string& path, GLenum mode) {
+    std::shared_ptr <Renderer::Texture2D> loadTexture(const std::string& texture, const std::string& path, GLenum mode = GL_NEAREST) {
         int channels = 0, width = 0, height = 0;
 
         stbi_set_flip_vertically_on_load(true);
@@ -121,7 +122,7 @@ public:
         return nullptr; 
     };
 
-    std::shared_ptr <Renderer::Sprite> loadSprite(const std::string& texName, const std::string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
+    std::shared_ptr <Renderer::Sprite> loadSprite(const std::string& texName, const std::string& subtexName, const std::string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
         auto tex = getTexture(texName);
 
         if (!tex) {
@@ -134,7 +135,52 @@ public:
             std::cerr << "Can't find the Shader: " << shaderName << " for the sprite" << nl;
         }
 
-        std::shared_ptr <Renderer::Sprite> newSprite = std::make_shared <Renderer::Sprite> (tex, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation);
+        std::shared_ptr <Renderer::Sprite> newSprite = std::make_shared <Renderer::Sprite> (tex, subtexName, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation);
+
+        return newSprite;
+    };
+
+    std::shared_ptr <Renderer::Texture2D> loadTexAtlas(const std::string& name, const std::string& path, const std::initializer_list <std::string>& subtextures, const int& width, const int& height) {
+        auto tex = this->loadTexture(std::move(name), std::move(path));
+        if (tex) {
+            int tWidth = tex->get_size().x, tHeight = tex->get_size().y;
+            glm::vec2 offset = glm::vec2(0.f, tHeight);
+
+            for (auto name : subtextures) {
+                glm::vec2 lb(0.f, 0.f);
+                glm::vec2 rt(0.f, 0.f);
+
+                lb.x = (float)(offset.x / tWidth);
+                lb.y = (float)((offset.y - height) / tHeight);
+                rt.x = (float)((offset.x + width) / tWidth);
+                rt.y = (float)(offset.y / tHeight);
+
+                tex->add_subtex(name, lb, rt);
+
+                offset.x += width;
+                if (offset.x >= tWidth) {
+                    offset.x = 0;
+                    offset.y -= height;
+                }
+            }
+        }
+        return tex;
+    };
+
+    std::shared_ptr <Renderer::AnimatedSprite> loadAnimSprite(const std::string& texName, const std::string& subtexName, const std::string& shaderName, const unsigned int Width, const unsigned int Height, const float Rotation) {
+        auto tex = getTexture(texName);
+
+        if (!tex) {
+            std::cerr << "Can't find the texture: " << texName << " for the sprite" << nl;
+        }
+
+        auto shader = getShader(shaderName);
+
+        if (!shader) {
+            std::cerr << "Can't find the Shader: " << shaderName << " for the sprite" << nl;
+        }
+
+        std::shared_ptr <Renderer::AnimatedSprite> newSprite = std::make_shared <Renderer::AnimatedSprite> (tex, subtexName, shader, glm::vec2(0.f, 0.f), glm::vec2(Width, Height), Rotation);
 
         return newSprite;
     };

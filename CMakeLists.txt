@@ -11,8 +11,10 @@ add_executable(${project_name_}
     src/Resources/stb_image.hpp
     src/Renderer/Texture2D.hpp
     src/Renderer/Sprite.hpp
+    src/Renderer/AnimatedSprite.hpp
     src/Resources/Parser.hpp
     src/Online/Client.hpp
+    src/Resources/AnimSpriteGroup.hpp
 )
 
 target_compile_features(${project_name_} PUBLIC cxx_std_17)
