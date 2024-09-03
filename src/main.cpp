@@ -37,12 +37,6 @@
 #include <vector>
 #include <thread>
 
-#ifdef online
-    #pragma comment(lib, "ws2_32.lib")
-    #include <winsock2.h>
-    #pragma warning(disable: 4996)
-#endif
-
 using namespace std;
 using DPair = pair<string, uint64_t>;
 
@@ -127,8 +121,8 @@ auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * s
 void jump() {
     if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
         switch (pl.look) {
-            case l_left: { sg_player.set_animation(0, "jleft"); break; }
-            case l_right: { sg_player.set_animation(0, "jright"); break; }
+            case l_left: { pl.current_anim = "jleft"; break; }
+            case l_right: { pl.current_anim = "jright"; break; }
         }
         __ticks2 = 0.f;
         int height = pl.y + sv.jump_height;
@@ -181,17 +175,29 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
 void set_stand_anim() {
     if (!pl.moving && !pl.jumping) {
         switch (pl.look) {
-            case l_left: { sg_player.set_animation(0, "stand_left"); break; }
-            case l_right: { sg_player.set_animation(0, "stand_right"); break; }
+            case l_left: { pl.current_anim = "stand_left"; break; }
+            case l_right: { pl.current_anim = "stand_right"; break; }
         }
     }
 }
+
+#ifdef online
+void netloop(Client* cli) {
+    for (;;) {
+        cli->send_msg(to_string(pl.x) + "/" + to_string(pl.y) + "/" + pl.current_anim + ";");
+        auto msg = cli->recv_msg();
+        pl2.x = stoi(msg.substr(0, msg.find_first_of("/")));
+        pl2.y = stoi(msg.substr(msg.find_first_of("/") + 1, msg.find_last_of("/")));
+        pl2.current_anim = msg.substr(msg.find_last_of("/") + 1, msg.find_first_of(";"));
+    }
+}
+#endif
 
 void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
         pl.moving = true;
         pl.look = l_left;
-        sg_player.set_animation(0, "mleft");
+        if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
         pl.x -= sv.max_speed;
         if (cam.locked) cam.x -= sv.max_speed;
     }
@@ -199,7 +205,7 @@ void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
         pl.moving = true;
         pl.look = l_right;
-        sg_player.set_animation(0, "mright");
+        if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
         pl.x += sv.max_speed;
         if (cam.locked) cam.x += sv.max_speed;
     }
@@ -244,6 +250,7 @@ int main(int argc, char const *argv[]) {
     pl2.x = 0;
     pl2.y = 0;
     pl.look = l_left;
+    pl.current_anim = "stand_right";
     pl.moving = false;
     pl.jumping = false;
     pl.spidering = false;
@@ -307,15 +314,6 @@ int main(int argc, char const *argv[]) {
         cerr << "Can't load GLAD!" << endl;
     }
 
-    #ifdef online // Checking for WSA (if online mode is on)
-        WSAData wsaData;
-        WORD DLLVersion = MAKEWORD(2, 1);
-        if (WSAStartup(DLLVersion, &wsaData) != 0) {
-            std::cout << "Error" << std::endl;
-        	return -1;
-        }
-    #endif
-
     cout << "Renderer: " << glGetString(GL_RENDERER) << endl; // Displaying OpenGL info
     cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
 
@@ -364,10 +362,18 @@ int main(int argc, char const *argv[]) {
         sg_player.add_animation(0, "stand_right", { DPair("stand_right", 1) });
         sg_player.add_animation(0, "stand_left", { DPair("stand_left", 1) });
 
-        sg_player.set_animation(0, "stand_left");
+        pl.current_anim = "stand_left";
+        pl2.current_anim = "stand_left";
 
         #ifdef online
-            sg_player2.add_sprite("Player", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.x, pl2.y); // Adding Player 2 sprite
+            sg_player2.add_sprite("Player", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.x, pl2.y); // Adding Player 2 sprite
+
+            sg_player2.add_animation(0, "mleft", { DPair("walk1_left", 100), DPair("walk2_left", 100) });
+            sg_player2.add_animation(0, "mright", { DPair("walk1_right", 100), DPair("walk2_right", 100) });
+            sg_player2.add_animation(0, "jleft", { DPair("jump_left", 700) });
+            sg_player2.add_animation(0, "jright", { DPair("jump_right", 700) });
+            sg_player2.add_animation(0, "stand_right", { DPair("stand_right", 1) });
+            sg_player2.add_animation(0, "stand_left", { DPair("stand_left", 1) });
 
             // Parsing server.cfg
             string servercfg = rm_main.getFileStr("server.cfg");
@@ -391,6 +397,11 @@ int main(int argc, char const *argv[]) {
         sg_player.set_timer();
         sg_player2.set_timer();
 
+        #ifdef online
+            thread t(netloop, &cli);
+            t.detach();
+        #endif
+
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
@@ -412,22 +423,19 @@ int main(int argc, char const *argv[]) {
             defaultShaderProgram->use(); // Using default shader
             tl_main.bind_all(); // Binding all textures
 
-            #ifdef online // Sending and recieving position
-                cli.send_msg(to_string(pl.x) + "/" + to_string(pl.y) + ";");
-                auto pl2.coords = cli.recv_msg();
-                pl2.x = stoi(pl2.coords.substr(0, pl2.coords.find_first_of("/")));
-                pl2.y = stoi(pl2.coords.substr(pl2.coords.find_first_of("/") + 1, pl2.coords.find_first_of(";")));
-            #endif
-
             fall(); // Always falling down
             prevent_clipping(); // Prevent player from clipping through walls
             set_stand_anim(); 
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
+            sg_player.set_animation(0, pl.current_anim); // Setting animation (Player 1)
 
-            sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
-            sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
+            #ifdef online
+                sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
+                sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
+                sg_player2.set_animation(0, pl2.current_anim); // Setting animation (Player 2)
+            #endif
 
             // Rendering all sprites
             sg_sprites.render_all();

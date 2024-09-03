@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include <thread>
+#include <chrono>
 
 #include "ResourceManager.hpp"
 #include "../Renderer/Sprite.hpp"
