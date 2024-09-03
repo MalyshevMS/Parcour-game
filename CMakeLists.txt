@@ -4,6 +4,11 @@ set(project_name_ Parcour-game)
 
 project(${project_name_})
 
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF)
+FetchContent_Declare(SFML GIT_REPOSITORY https://github.com/SFML/SFML.git GIT_TAG 2.5.1)
+FetchContent_MakeAvailable(SFML)
+
 add_executable(${project_name_} 
     src/main.cpp
     src/Renderer/ShaderProgram.hpp
@@ -32,6 +37,8 @@ target_link_libraries(${project_name_} glad)
 
 add_subdirectory(external/glm)
 target_link_libraries(${project_name_} glm)
+
+target_link_libraries(${project_name_} sfml-graphics)
 
 set_target_properties(${project_name_} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
 
