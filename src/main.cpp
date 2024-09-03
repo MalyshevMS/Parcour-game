@@ -1,6 +1,6 @@
-// #define debug
+#define debug
 // #define fullscreen
-// #define online
+#define online
 
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
@@ -19,15 +19,13 @@
 #include "Resources/AnimSpriteGroup.hpp"
 #include "Resources/Parser.hpp"
 #include "Other/KeyHandler.hpp"
+#include "Online/NetHandler.hpp"
 
 #include "Variables/OpenGL.hpp" // variables
 #include "Variables/Camera.hpp"
-#include "Variables/Server.hpp"
+#include "Variables/Client.hpp"
 #include "Variables/Player.hpp"
 
-#ifdef online
-    #include "Online/Client.hpp"
-#endif
 
 #include "keys"
 
@@ -48,7 +46,7 @@ using DPair = pair<string, uint64_t>;
 
 OpenGL gl;
 Camera cam;
-Server sv;
+Client cl;
 Player pl;
 Player pl2;
 
@@ -116,7 +114,7 @@ void prevent_clipping() {
     }
 }
 
-auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * sv.gravity; };
+auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * cl.gravity; };
 
 void jump() {
     if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
@@ -125,10 +123,10 @@ void jump() {
             case l_right: { pl.current_anim = "jright"; break; }
         }
         __ticks2 = 0.f;
-        int height = pl.y + sv.jump_height;
+        int height = pl.y + cl.jump_height;
         pl.jumping = true;
         while (pl.y < height && !collides_ceiling()) {
-            pl.y += -g(__ticks2) + sv.gravity;
+            pl.y += -g(__ticks2) + cl.gravity;
             __ticks2++;
             sleep(1);
         }
@@ -148,8 +146,8 @@ bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
 
 void fall() {
     if (!collides_floor() && !collides_floor(0) && !pl.spidering && !pl.jumping && pl.y > 0) {
-        if (g(__ticks) < sv.max_speed) pl.y -= g(__ticks);
-        else pl.y -= sv.max_speed;
+        if (g(__ticks) < cl.max_speed) pl.y -= g(__ticks);
+        else pl.y -= cl.max_speed;
         __ticks++;
     } else __ticks = 0;
 }
@@ -181,33 +179,31 @@ void set_stand_anim() {
     }
 }
 
-#ifdef online
-void netloop(Client* cli) {
-    for (;;) {
-        cli->send_msg(to_string(pl.x) + "/" + to_string(pl.y) + "/" + pl.current_anim + ";");
+void netloop(NetHandler* cli) {
+    while (true) {
+        cli->send_msg(to_string(pl.x) + "/" + to_string(pl.y) + "/" + pl.current_anim);
         auto msg = cli->recv_msg();
         pl2.x = stoi(msg.substr(0, msg.find_first_of("/")));
         pl2.y = stoi(msg.substr(msg.find_first_of("/") + 1, msg.find_last_of("/")));
-        pl2.current_anim = msg.substr(msg.find_last_of("/") + 1, msg.find_first_of(";"));
+        pl2.current_anim = msg.substr(msg.find_last_of("/") + 1);
     }
 }
-#endif
 
 void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
         pl.moving = true;
         pl.look = l_left;
         if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
-        pl.x -= sv.max_speed;
-        if (cam.locked) cam.x -= sv.max_speed;
+        pl.x -= cl.max_speed;
+        if (cam.locked) cam.x -= cl.max_speed;
     }
 
     if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
         pl.moving = true;
         pl.look = l_right;
         if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
-        pl.x += sv.max_speed;
-        if (cam.locked) cam.x += sv.max_speed;
+        pl.x += cl.max_speed;
+        if (cam.locked) cam.x += cl.max_speed;
     }
 
     if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
@@ -215,12 +211,12 @@ void keyHandler(GLFWwindow* win) {
     }
 
     if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        sv.max_speed = 20;
-    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) sv.max_speed = 10;
+        cl.max_speed = 20;
+    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) cl.max_speed = 10;
 
     if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        sv.max_speed = 5;
-    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) sv.max_speed = 10;
+        cl.max_speed = 5;
+    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) cl.max_speed = 10;
 }
 
 int main(int argc, char const *argv[]) {
@@ -240,10 +236,11 @@ int main(int argc, char const *argv[]) {
     cam.mag_speed = 0.01f;
     cam.locked = true;
 
-    sv.max_speed = 10;
-    sv.jump_speed = 5;
-    sv.jump_height = 160;
-    sv.gravity = 9.80665f;
+    cl.max_speed = 10;
+    cl.jump_speed = 5;
+    cl.jump_height = 160;
+    cl.gravity = 9.80665f;
+    cl.server = false;
 
     pl.x = 0;
     pl.y = 80;
@@ -256,21 +253,6 @@ int main(int argc, char const *argv[]) {
     pl.spidering = false;
     pl.noclip = false;
 
-
-    if (argc >= 2 && argv[1] == "-res") {
-        if (argc < 3) {
-            cerr << "Using: -res widthxheight" << endl;
-            return -1;
-        } else {
-            string res = argv[2];
-            Size.x = stoi(res.substr(0, res.find_first_of('x')));
-            Size.y = stoi(res.substr(res.find_first_of('x') + 1));
-
-            pl.x = Size.x / 2 - 40;
-            pl.y = Size.y / 2 - 280;
-        }
-    }
-
     string comand_line;
 
     #ifdef debug // Debugger console (not ready yet)
@@ -279,6 +261,13 @@ int main(int argc, char const *argv[]) {
             cin >> comand_line;
 
             if (comand_line == "exit") { exit(0); }
+            else if (comand_line == "mkhost") {
+                cl.server = true;
+                cout << "Your role: Server" << endl;
+            } else if (comand_line == "rmhost") {
+                cl.server = false;
+                cout << "Your role: Client" << endl;
+            }
         } while (comand_line != "play");
     #endif
 
@@ -374,14 +363,14 @@ int main(int argc, char const *argv[]) {
             sg_player2.add_animation(0, "jright", { DPair("jump_right", 700) });
             sg_player2.add_animation(0, "stand_right", { DPair("stand_right", 1) });
             sg_player2.add_animation(0, "stand_left", { DPair("stand_left", 1) });
-
-            // Parsing server.cfg
-            string servercfg = rm_main.getFileStr("server.cfg");
-            string ip = servercfg.substr(0, servercfg.find_first_of(':'));
-            unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
-            
-            Client cli(ip, port); // Creating client
         #endif
+
+        // Parsing server.cfg
+        string servercfg = rm_main.getFileStr("server.cfg");
+        string ip = servercfg.substr(0, servercfg.find_first_of(':'));
+        unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
+        
+        NetHandler cli(ip, port, cl.server); // Creating client
 
         // Binding keys (some functions are still in older Key Handler)
         kh_main.bind(KEY_SPACE, [](){ if (!pl.jumping) { std::thread t(jump); t.detach(); } });

@@ -18,7 +18,7 @@ add_executable(${project_name_}
     src/Renderer/Sprite.hpp
     src/Renderer/AnimatedSprite.hpp
     src/Resources/Parser.hpp
-    src/Online/Client.hpp
+    src/Online/NetHandler.hpp
     src/Resources/AnimSpriteGroup.hpp
 )
 
@@ -38,7 +38,7 @@ target_link_libraries(${project_name_} glad)
 add_subdirectory(external/glm)
 target_link_libraries(${project_name_} glm)
 
-target_link_libraries(${project_name_} sfml-graphics)
+target_link_libraries(${project_name_} sfml-graphics sfml-window sfml-network)
 
 set_target_properties(${project_name_} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
 
