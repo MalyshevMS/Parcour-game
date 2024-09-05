@@ -123,3 +123,16 @@
 #define KEY_RIGHT_ALT          346
 #define KEY_RIGHT_SUPER        347
 #define KEY_MENU               348
+
+/* Mouse keys (buttons) */
+#define MOUSE_1         0
+#define MOUSE_2         1
+#define MOUSE_3         2
+#define MOUSE_4         3
+#define MOUSE_5         4
+#define MOUSE_6         5
+#define MOUSE_7         6
+#define MOUSE_8         7
+#define MOUSE_LEFT      MOUSE_1
+#define MOUSE_RIGHT     MOUSE_2
+#define MOUSE_MIDDLE    MOUSE_3
