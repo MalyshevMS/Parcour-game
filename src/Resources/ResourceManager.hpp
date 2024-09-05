@@ -13,7 +13,6 @@
 #include "../Renderer/AnimatedSprite.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG
 #include "stb_image.hpp"
 #define nl std::endl
 
@@ -141,6 +140,33 @@ public:
     };
 
     std::shared_ptr <Renderer::Texture2D> loadTexAtlas(const std::string& name, const std::string& path, const std::initializer_list <std::string>& subtextures, const int& width, const int& height) {
+        auto tex = this->loadTexture(std::move(name), std::move(path));
+        if (tex) {
+            int tWidth = tex->get_size().x, tHeight = tex->get_size().y;
+            glm::vec2 offset = glm::vec2(0.f, tHeight);
+
+            for (auto name : subtextures) {
+                glm::vec2 lb(0.f, 0.f);
+                glm::vec2 rt(0.f, 0.f);
+
+                lb.x = (float)(offset.x / tWidth);
+                lb.y = (float)((offset.y - height) / tHeight);
+                rt.x = (float)((offset.x + width) / tWidth);
+                rt.y = (float)(offset.y / tHeight);
+
+                tex->add_subtex(name, lb, rt);
+
+                offset.x += width;
+                if (offset.x >= tWidth) {
+                    offset.x = 0;
+                    offset.y -= height;
+                }
+            }
+        }
+        return tex;
+    };
+
+    std::shared_ptr <Renderer::Texture2D> loadTexAtlas(const std::string& name, const std::string& path, const std::vector <std::string>& subtextures, const int& width, const int& height) {
         auto tex = this->loadTexture(std::move(name), std::move(path));
         if (tex) {
             int tWidth = tex->get_size().x, tHeight = tex->get_size().y;

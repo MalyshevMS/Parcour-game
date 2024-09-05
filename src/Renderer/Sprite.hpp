@@ -49,6 +49,10 @@ namespace Renderer  {
                 subtex.LB.x, subtex.LB.y
             };
 
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+
             glGenVertexArrays(1, &_VAO);
             glBindVertexArray(_VAO);
 

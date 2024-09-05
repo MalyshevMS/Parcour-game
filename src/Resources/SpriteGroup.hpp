@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <memory>
 #include <map>
 #include <thread>
@@ -32,6 +33,17 @@ public:
         default_positions.push_back(glm::vec2(pos_x, pos_y));
         current_positions.push_back(glm::vec2(pos_x, pos_y));
         rotations.push_back(rotation);
+    };
+
+    void add_text(const std::string& atlas, const std::string& text, const std::string& shader, const int& width, const int& height, const float& rotation, const int& pos_x, const int& pos_y) {
+        for (int i = 0; i < text.size(); i++) {
+            std::string str;
+            str.push_back((char)std::toupper(text[i]));
+            auto new_spr = resMan->loadSprite(atlas, str, shader, width, height, rotation);
+            new_spr->setPos(glm::vec2(pos_x + (i * width), pos_y));
+
+            sprites.push_back(new_spr);
+        }
     };
 
     void render_all() {

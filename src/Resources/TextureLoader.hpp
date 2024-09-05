@@ -28,6 +28,11 @@ public:
         textures.push_back(atlas);
     };
 
+    void add_textures_from_atlas(const std::string& name, const std::string& path, const std::vector<std::string>& subtex_names, const glm::vec2& tex_size) {
+        auto atlas = resMan->loadTexAtlas(name, path, subtex_names, tex_size.x, tex_size.y);
+        textures.push_back(atlas);
+    };
+
     void bind_all() {
         for (int i = 0; i < textures.size(); i++) {
             textures[i]->bind();

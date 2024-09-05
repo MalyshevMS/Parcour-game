@@ -1,6 +1,6 @@
-#define debug
+// #define debug
 // #define fullscreen
-#define online
+// #define online
 
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
@@ -55,6 +55,7 @@ ResourceManager rm_main; // Main Resource manager
 TexLoader tl_main; // Main Texture loader
 
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
+SprGroup sg_text; // Group for text rendering
 AnimSprGroup sg_player; // Group for Player 1
 AnimSprGroup sg_player2; // Group for Player 2
 
@@ -227,6 +228,8 @@ int main(int argc, char const *argv[]) {
     gl.default_shader_path_list; // Please change this value inside of the structure
     gl.sprite_shader_path_list; // Please change this value inside of the structure
     gl.sprite_size = 80;
+    gl.font_height = 40;
+    gl.font_width = 28;
 
     cam.x = pl.x - Size.x / 2;
     cam.y = pl.y - gl.sprite_size;
@@ -314,6 +317,7 @@ int main(int argc, char const *argv[]) {
         sg_sprites = SprGroup(&rm_main);
         sg_player = AnimSprGroup(&rm_main);
         sg_player2 = AnimSprGroup(&rm_main);
+        sg_text = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
         kh_main = KeyHandler(window);
 
@@ -365,12 +369,22 @@ int main(int argc, char const *argv[]) {
             sg_player2.add_animation(0, "stand_left", { DPair("stand_left", 1) });
         #endif
 
+        vector <string> chars;
+        for (int i = 32; i < 96; i++) {
+            string str;
+            str.push_back((char)i);
+            chars.push_back(str);
+        }
+        tl_main.add_textures_from_atlas("Font", "res/textures/font.png", chars, glm::vec2(64, 64));
+
         // Parsing server.cfg
         string servercfg = rm_main.getFileStr("server.cfg");
         string ip = servercfg.substr(0, servercfg.find_first_of(':'));
         unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
-        
-        NetHandler cli(ip, port, cl.server); // Creating client
+
+        #ifdef online
+            NetHandler cli(ip, port, cl.server); // Creating client
+        #endif
 
         // Binding keys (some functions are still in older Key Handler)
         kh_main.bind(KEY_SPACE, [](){ if (!pl.jumping) { std::thread t(jump); t.detach(); } });
@@ -390,6 +404,8 @@ int main(int argc, char const *argv[]) {
             thread t(netloop, &cli);
             t.detach();
         #endif
+
+        sg_text.add_text("Font", "this is the saMPle of text", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl.x, pl.y + 2 * gl.sprite_size);
 
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
@@ -430,6 +446,7 @@ int main(int argc, char const *argv[]) {
             sg_sprites.render_all();
             sg_player.render_all();
             sg_player2.render_all();
+            sg_text.render_all();
 
             sg_player.update_all();
             sg_player2.update_all();            
@@ -443,6 +460,7 @@ int main(int argc, char const *argv[]) {
         sg_sprites.delete_all(); 
         sg_player.delete_all();
         sg_player2.delete_all();
+        sg_text.delete_all();
     }
 
 
