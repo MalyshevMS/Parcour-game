@@ -14,12 +14,13 @@ void sleep(unsigned int milliseconds) {
 }
 
 class SprGroup {
-private:
+protected:
     ResourceManager* resMan;
     std::vector <std::shared_ptr<Renderer::Sprite>> sprites;
     std::vector <glm::vec2> default_positions;
     std::vector <glm::vec2> current_positions;
     std::vector <float> rotations;
+    glm::vec2 origin = glm::vec2(0, 0);
 public:
     SprGroup(ResourceManager* resMan = nullptr) {
         this->resMan = resMan;
@@ -28,6 +29,8 @@ public:
     void add_sprite(const std::string& tex, const std::string& subtex, const std::string& shader, const unsigned int& width, const unsigned int& height, const float& rotation, const int& pos_x, const int& pos_y) {
         auto new_spr = this->resMan->loadSprite(tex, subtex, shader, width, height, rotation);
         new_spr->setPos(glm::vec2(pos_x, pos_y));
+
+        if (sprites.size() == 0) origin = glm::vec2(pos_x, pos_y);
 
         sprites.push_back(new_spr);
         default_positions.push_back(glm::vec2(pos_x, pos_y));
@@ -39,10 +42,8 @@ public:
         for (int i = 0; i < text.size(); i++) {
             std::string str;
             str.push_back((char)std::toupper(text[i]));
-            auto new_spr = resMan->loadSprite(atlas, str, shader, width, height, rotation);
-            new_spr->setPos(glm::vec2(pos_x + (i * width), pos_y));
 
-            sprites.push_back(new_spr);
+            this->add_sprite(atlas, str, shader, width, height, rotation, pos_x + (i * width), pos_y);
         }
     };
 
@@ -55,13 +56,14 @@ public:
     void move_all(int x, int y) {
         for (int i = 0; i < sprites.size(); i++) {
             sprites[i]->setPos(glm::vec2(current_positions[i].x + x, current_positions[i].y + y));
+            current_positions[i].x += x;
+            current_positions[i].y += y;
+            if (i == 0) origin = current_positions[i];
         }
     };
 
     void set_pos(int x, int y) {
-        for (int i = 0; i < sprites.size(); i++) {
-            sprites[i]->setPos(glm::vec2(x, y));
-        }
+        this->move_all(x - origin.x, y - origin.y);
     }
 
     // Please don't use this function!
@@ -85,6 +87,10 @@ public:
         default_positions.clear();
         current_positions.clear();
         rotations.clear();
+    };
+
+    void delete_sprite(int spr_num) {
+        sprites.erase(sprites.begin() + spr_num);
     };
 
     std::vector <std::shared_ptr<Renderer::Sprite>> get_sprites() {

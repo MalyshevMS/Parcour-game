@@ -8,6 +8,7 @@ struct Player {
     int y = 80; // Player Y
     int look = l_left; // Player looking direction
     std::string current_anim = ""; // Player current animation
+    std::string name = ""; // Player nickname
     bool moving = false; // Player moving flag
     bool jumping = false; // Player jumping flag
     bool spidering = false; // Player spider mode flag

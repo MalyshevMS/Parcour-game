@@ -56,6 +56,7 @@ TexLoader tl_main; // Main Texture loader
 
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
 SprGroup sg_text; // Group for text rendering
+SprGroup sg_pause; // Group for text while pauses
 AnimSprGroup sg_player; // Group for Player 1
 AnimSprGroup sg_player2; // Group for Player 2
 
@@ -157,6 +158,14 @@ void detect_fail() {
 
 }
 
+void pause() {
+    sg_pause.add_text("Font", pl.name + " pauses game.", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, Size.x / 2 + cam.x - ((pl.name + " pauses game.").size() / 2) * gl.font_width, Size.y / 2 + cam.y);
+}
+
+void unpause() {
+    sg_pause.delete_all();
+}
+
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
         cam.locked ? cam.locked = false : cam.locked = true;
@@ -166,7 +175,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
         glfwSetWindowShouldClose(win, GL_TRUE);
     }
 
-    if(key == KEY_B && action == GLFW_PRESS) {
+    if (key == KEY_B && action == GLFW_PRESS) {
         pl.noclip ? pl.noclip = false : pl.noclip = true;
     }
 }
@@ -250,6 +259,7 @@ int main(int argc, char const *argv[]) {
     pl2.x = 0;
     pl2.y = 0;
     pl.look = l_left;
+    pl.name = "test";
     pl.current_anim = "stand_right";
     pl.moving = false;
     pl.jumping = false;
@@ -318,6 +328,7 @@ int main(int argc, char const *argv[]) {
         sg_player = AnimSprGroup(&rm_main);
         sg_player2 = AnimSprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
+        sg_pause = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
         kh_main = KeyHandler(window);
 
@@ -367,6 +378,7 @@ int main(int argc, char const *argv[]) {
             sg_player2.add_animation(0, "jright", { DPair("jump_right", 700) });
             sg_player2.add_animation(0, "stand_right", { DPair("stand_right", 1) });
             sg_player2.add_animation(0, "stand_left", { DPair("stand_left", 1) });
+
         #endif
 
         vector <string> chars;
@@ -376,14 +388,25 @@ int main(int argc, char const *argv[]) {
             chars.push_back(str);
         }
         tl_main.add_textures_from_atlas("Font", "res/textures/font.png", chars, glm::vec2(64, 64));
+        tl_main.add_texture("Filler", "res/textures/filler.png");
 
         // Parsing server.cfg
-        string servercfg = rm_main.getFileStr("server.cfg");
-        string ip = servercfg.substr(0, servercfg.find_first_of(':'));
-        unsigned short port = atoi(servercfg.substr(servercfg.find_first_of(':') + 1, servercfg.find_first_of(';')).c_str());
+        string f = rm_main.getFileStr("server.cfg");
+        string ip = f.substr(f.find("=") + 1, f.find(":") - f.find("=") - 1);
+        unsigned short port = stoi(f.substr(f.find(":") + 1, f.find("\n") - f.find(":") - 1));
+        f = f.substr(f.find("\n") + 1);
+        string mode = f.substr(f.find("=") + 1, f.find("\n") - f.find("=") - 1);
+        mode.pop_back();
+        pl.name = f.substr(f.rfind("=") + 1, f.rfind("\n") - f.rfind("=") - 1);
+        cl.server = mode == "host" ? true : false;
+
 
         #ifdef online
             NetHandler cli(ip, port, cl.server); // Creating client
+            cli.send_msg(pl.name);
+            pl2.name = cli.recv_msg();
+            sg_player2.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl2.name.size(), gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2 - 5, pl2.y + gl.sprite_size);
+            sg_player2.add_text("Font", pl2.name, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2, pl2.y + gl.sprite_size);
         #endif
 
         // Binding keys (some functions are still in older Key Handler)
@@ -405,7 +428,8 @@ int main(int argc, char const *argv[]) {
             t.detach();
         #endif
 
-        sg_text.add_text("Font", "this is the saMPle of text", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl.x, pl.y + 2 * gl.sprite_size);
+        sg_player.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl.name.size(), gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2 - 5, pl.y + gl.sprite_size);
+        sg_player.add_text("Font", pl.name, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2, pl.y + gl.sprite_size);
 
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
@@ -447,6 +471,7 @@ int main(int argc, char const *argv[]) {
             sg_player.render_all();
             sg_player2.render_all();
             sg_text.render_all();
+            sg_pause.render_all();
 
             sg_player.update_all();
             sg_player2.update_all();            
@@ -461,6 +486,7 @@ int main(int argc, char const *argv[]) {
         sg_player.delete_all();
         sg_player2.delete_all();
         sg_text.delete_all();
+        sg_pause.delete_all();
     }
 
 
