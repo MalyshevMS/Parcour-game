@@ -67,12 +67,20 @@ KeyHandler kh_main; // Main Key Handler
 float __ticks;
 float __ticks2;
 
+/// @brief Function for resizing window
+/// @param win GLFW window poiner
+/// @param width new window width
+/// @param height new window height
 void sizeHandler(GLFWwindow* win, int width, int height) {
     Size.x = width;
     Size.y = height;
     glViewport(0, 0, Size.x, Size.y);
 }
 
+/// @brief Checks if player collides floor
+/// @param epsilon how much units player can go through sprite in Y direction
+/// @param epsilon2 how much units player can be far away from sprite in X direction
+/// @return true, if player collides floor. Else false
 bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
     if (pl.y <= 0) return true;
     vector sprites_pos = sg_sprites.get_current_pos();
@@ -82,6 +90,10 @@ bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
     return false;
 }
 
+/// @brief Checks if player collides ceiling
+/// @param epsilon how much units player can go through sprite in Y direction
+/// @param epsilon2 how much units player can be far away from sprite in X direction
+/// @return true, if player collides ceiling. Else false
 bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
@@ -90,6 +102,10 @@ bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
     return false;
 }
 
+/// @brief Checks if player collides left wall
+/// @param epsilon how much units player can go through sprite in X direction
+/// @param epsilon2 how much units player can be far away from sprite in Y direction
+/// @return true, if player collides left wall. Else false
 bool collides_left(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
@@ -98,6 +114,10 @@ bool collides_left(int epsilon = 0, int epsilon2 = 2) {
     return false;
 }
 
+/// @brief Checks if player collides right wall
+/// @param epsilon how much units player can go through sprite in X direction
+/// @param epsilon2 how much units player can be far away from sprite in Y direction
+/// @return true, if player collides right wall. Else false
 bool collides_right(int epsilon = 0, int epsilon2 = 2) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
@@ -106,6 +126,8 @@ bool collides_right(int epsilon = 0, int epsilon2 = 2) {
     return false;
 }
 
+
+/// @brief Prevents player from clipping through the wall
 void prevent_clipping() {
     if (!pl.noclip) {
         if (collides_floor(1) && !collides_ceiling()) pl.y++;
@@ -116,8 +138,14 @@ void prevent_clipping() {
     }
 }
 
+
+/// @brief Function for calculating falling speed based on time
+/// @param ticks how much much ticks passed from the start of falling
+/// @param tick_time how much game ticks will be proceed as 1 second
+/// @return Falling velocity
 auto g = [](float ticks, float tick_time = 50.f){ return (ticks / tick_time) * cl.gravity; };
 
+/// @brief Function for player jumping
 void jump() {
     if ((collides_floor() || collides_floor(0)) && !collides_ceiling()) {
         switch (pl.look) {
@@ -137,6 +165,10 @@ void jump() {
     }
 }
 
+/// @brief Function for checking collisions beetween 2 sprite groups
+/// @param sg1 First sprite group
+/// @param sg2 Second sprite group
+/// @return Is these groups colliding
 bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
     for (auto i : sg1.get_current_pos()) {
         for (auto j : sg2.get_current_pos()) {
@@ -146,6 +178,7 @@ bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
     return false;
 }
 
+/// @brief Function for player falling
 void fall() {
     if (!collides_floor() && !collides_floor(0) && !pl.spidering && !pl.jumping && pl.y > 0) {
         if (g(__ticks) < cl.max_speed) pl.y -= g(__ticks);
@@ -158,17 +191,20 @@ void detect_fail() {
 
 }
 
+/// @brief Displays pause text
 void pause() {
-    sg_pause.add_text("Font", pl.name + " pauses game.", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, Size.x / 2 + cam.x - ((pl.name + " pauses game.").size() / 2) * gl.font_width, Size.y / 2 + cam.y);
+    sg_pause.add_text("Font", "Game paused.", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, Size.x / 2 + cam.x - 6 * gl.font_width, Size.y / 2 + cam.y);
 }
 
+/// @brief Deletes pause text
 void unpause() {
     sg_pause.delete_all();
 }
 
+/// @brief Proceeds once key pressings (if key was hold down for a long it's still will be recognize as once pressing)
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
-        cam.locked ? cam.locked = false : cam.locked = true;
+        cam.locked = !cam.locked;
     }
 
     if (key == KEY_Q && action == GLFW_PRESS) {
@@ -176,10 +212,18 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     }
 
     if (key == KEY_B && action == GLFW_PRESS) {
-        pl.noclip ? pl.noclip = false : pl.noclip = true;
+        pl.noclip = !pl.noclip;
     }
+
+    #ifndef online
+        if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
+            cl.paused = !cl.paused;
+            if (cl.paused) pause();
+        } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
+    #endif
 }
 
+/// @brief Sets player animation to stand in the right direction
 void set_stand_anim() {
     if (!pl.moving && !pl.jumping) {
         switch (pl.look) {
@@ -189,6 +233,9 @@ void set_stand_anim() {
     }
 }
 
+/// @brief Proceeds a Net realtion beetween 2 players
+/// @warning Start this function only in separate thread!
+/// @param cli pointer to the current Net Handler
 void netloop(NetHandler* cli) {
     while (true) {
         cli->send_msg(to_string(pl.x) + "/" + to_string(pl.y) + "/" + pl.current_anim);
@@ -199,6 +246,8 @@ void netloop(NetHandler* cli) {
     }
 }
 
+/// @brief Function for proceeding keys pressing. P.S. This function supports long key pressing
+/// @param win GLFW window pointer
 void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
         pl.moving = true;
@@ -434,8 +483,10 @@ int main(int argc, char const *argv[]) {
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
-            keyHandler(window); // Setting (old) key handler
-            kh_main.use(); // Setting (new) key handler
+            if (!cl.paused) {
+                keyHandler(window); // Setting (old) key handler
+                kh_main.use(); // Setting (new) key handler
+            }
 
             // Projection matrix variables
             float projMat_right  = Size.x * cam.mag + cam.x;
@@ -452,19 +503,24 @@ int main(int argc, char const *argv[]) {
             defaultShaderProgram->use(); // Using default shader
             tl_main.bind_all(); // Binding all textures
 
-            fall(); // Always falling down
-            prevent_clipping(); // Prevent player from clipping through walls
-            set_stand_anim(); 
+            if (!cl.paused) {
+                fall(); // Always falling down
+                prevent_clipping(); // Prevent player from clipping through walls
+                set_stand_anim(); 
 
-            sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
-            sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
-            sg_player.set_animation(0, pl.current_anim); // Setting animation (Player 1)
+                sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
+                sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
+                sg_player.set_animation(0, pl.current_anim); // Setting animation (Player 1)
 
-            #ifdef online
-                sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
-                sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
-                sg_player2.set_animation(0, pl2.current_anim); // Setting animation (Player 2)
-            #endif
+                #ifdef online
+                    sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
+                    sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
+                    sg_player2.set_animation(0, pl2.current_anim); // Setting animation (Player 2)
+                #endif
+
+                sg_player.update_all();
+                sg_player2.update_all();            
+            }
 
             // Rendering all sprites
             sg_sprites.render_all();
@@ -472,9 +528,6 @@ int main(int argc, char const *argv[]) {
             sg_player2.render_all();
             sg_text.render_all();
             sg_pause.render_all();
-
-            sg_player.update_all();
-            sg_player2.update_all();            
 
             sleep(1); // 1ms delay
             glfwSwapBuffers(window); // Swapping front and back buffers
