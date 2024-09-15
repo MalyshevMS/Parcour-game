@@ -11,6 +11,5 @@ struct Player {
     std::string name = ""; // Player nickname
     bool moving = false; // Player moving flag
     bool jumping = false; // Player jumping flag
-    bool spidering = false; // Player spider mode flag
     bool noclip = false; // Player no clipping flag
 };

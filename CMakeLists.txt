@@ -49,3 +49,7 @@ add_custom_command(TARGET ${project_name_} POST_BUILD
 add_custom_command(TARGET ${project_name_} POST_BUILD 
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 ${CMAKE_SOURCE_DIR}/settings $<TARGET_FILE_DIR:${project_name_}>)
+
+add_custom_command(TARGET ${project_name_} POST_BUILD 
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+${CMAKE_SOURCE_DIR}/libs $<TARGET_FILE_DIR:${project_name_}>)

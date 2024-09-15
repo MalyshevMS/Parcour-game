@@ -131,6 +131,27 @@
             "size.x": 80, "size.y": 80,
             "x": 640, "y": 160,
             "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 720, "y": 400,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 800, "y": 400,
+            "rot": 0.0,
+            "end": false
+        },
+        {
+            "tex": "Wall", 
+            "size.x": 80, "size.y": 80,
+            "x": 880, "y": 400,
+            "rot": 0.0,
             "end": true
         }
     ]

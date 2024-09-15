@@ -82,10 +82,10 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
 /// @param epsilon2 how much units player can be far away from sprite in X direction
 /// @return true, if player collides floor. Else false
 bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
-    if (pl.y <= 0) return true;
+    if (pl.y <= epsilon) return true;
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (pl.y - (sprites_pos[i].y + gl.sprite_size) <= -epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
+        if (abs(pl.y - sprites_pos[i].y) <= gl.sprite_size - epsilon && pl.y - sprites_pos[i].y >= epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -94,10 +94,10 @@ bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
 /// @param epsilon how much units player can go through sprite in Y direction
 /// @param epsilon2 how much units player can be far away from sprite in X direction
 /// @return true, if player collides ceiling. Else false
-bool collides_ceiling(int epsilon = 0, int epsilon2 = 0) {
+bool collides_ceiling(int epsilon = 2 , int epsilon2 = 0) {
     vector sprites_pos = sg_sprites.get_current_pos();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl.y + gl.sprite_size) - sprites_pos[i].y) <= -epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
+        if ((pl.y + gl.sprite_size) - sprites_pos[i].y >= -epsilon && (pl.y + gl.sprite_size) - sprites_pos[i].y <= gl.sprite_size && abs(pl.x - sprites_pos[i].x) < gl.sprite_size) return true;
     }
     return false;
 }
@@ -130,11 +130,7 @@ bool collides_right(int epsilon = 0, int epsilon2 = 2) {
 /// @brief Prevents player from clipping through the wall
 void prevent_clipping() {
     if (!pl.noclip) {
-        if (collides_floor(1) && !collides_ceiling()) pl.y++;
-        else if (collides_left(1) && !collides_right()) {
-            pl.x += gl.sprite_size / 2;
-            cam.x += gl.sprite_size / 2;
-        }
+        if (collides_floor(1)) pl.y++;
     }
 }
 
@@ -180,7 +176,7 @@ bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
 
 /// @brief Function for player falling
 void fall() {
-    if (!collides_floor() && !collides_floor(0) && !pl.spidering && !pl.jumping && pl.y > 0) {
+    if (!collides_floor() && !collides_floor(0) && !pl.jumping && pl.y > 0) {
         if (g(__ticks) < cl.max_speed) pl.y -= g(__ticks);
         else pl.y -= cl.max_speed;
         __ticks++;
@@ -213,6 +209,10 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
 
     if (key == KEY_B && action == GLFW_PRESS) {
         pl.noclip = !pl.noclip;
+    }
+
+    if (key == KEY_G && action == 1) {
+        cout << collides_left() << endl;
     }
 
     #ifndef online
@@ -268,14 +268,6 @@ void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
         pl.moving = false;
     }
-
-    if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        cl.max_speed = 20;
-    } else if (glfwGetKey(win, KEY_LEFT_CONTROL) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_SHIFT) != GLFW_PRESS) cl.max_speed = 10;
-
-    if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        cl.max_speed = 5;
-    } else if (glfwGetKey(win, KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(win, KEY_LEFT_CONTROL) != GLFW_PRESS) cl.max_speed = 10;
 }
 
 int main(int argc, char const *argv[]) {
@@ -312,7 +304,6 @@ int main(int argc, char const *argv[]) {
     pl.current_anim = "stand_right";
     pl.moving = false;
     pl.jumping = false;
-    pl.spidering = false;
     pl.noclip = false;
 
     string comand_line;
@@ -460,7 +451,6 @@ int main(int argc, char const *argv[]) {
 
         // Binding keys (some functions are still in older Key Handler)
         kh_main.bind(KEY_SPACE, [](){ if (!pl.jumping) { std::thread t(jump); t.detach(); } });
-        kh_main.bind('W', [](){ if (collides_ceiling()) pl.spidering = true; }, [](){ pl.spidering = false; });
         kh_main.bind('0', [](){ cam.mag -= cam.mag_speed; });
         kh_main.bind('9', [](){ cam.mag += cam.mag_speed; });
         kh_main.bind(KEY_UP, [](){ cam.y += cam.speed; });
