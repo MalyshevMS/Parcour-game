@@ -16,7 +16,6 @@
 #include "Resources/ResourceManager.hpp"
 #include "Resources/TextureLoader.hpp"
 #include "Resources/SpriteGroup.hpp"
-#include "Resources/AnimSpriteGroup.hpp"
 #include "Resources/Parser.hpp"
 #include "Other/KeyHandler.hpp"
 #include "Online/NetHandler.hpp"
@@ -25,7 +24,8 @@
 #include "Variables/Camera.hpp"
 #include "Variables/Client.hpp"
 #include "Variables/Player.hpp"
-
+#include "Variables/Cursor.hpp"
+#include "Variables/Bullet.hpp"
 
 #include "keys"
 
@@ -47,6 +47,7 @@ using DPair = pair<string, uint64_t>;
 OpenGL gl;
 Camera cam;
 Client cl;
+Cursor cur;
 Player pl;
 Player pl2;
 
@@ -57,8 +58,9 @@ TexLoader tl_main; // Main Texture loader
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
 SprGroup sg_text; // Group for text rendering
 SprGroup sg_pause; // Group for text while pauses
-AnimSprGroup sg_player; // Group for Player 1
-AnimSprGroup sg_player2; // Group for Player 2
+SprGroup sg_bullets; // Group for bullets
+SprGroup sg_player; // Group for Player 1
+SprGroup sg_player2; // Group for Player 2
 
 Parser pars_main; // Main parser
 
@@ -83,9 +85,9 @@ void sizeHandler(GLFWwindow* win, int width, int height) {
 /// @return true, if player collides floor. Else false
 bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
     if (pl.y <= epsilon) return true;
-    vector sprites_pos = sg_sprites.get_current_pos();
+    vector sprites_pos = sg_sprites.get_sprites();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs(pl.y - sprites_pos[i].y) <= gl.sprite_size - epsilon && pl.y - sprites_pos[i].y >= epsilon && abs(pl.x - sprites_pos[i].x) < gl.sprite_size - epsilon2) return true;
+        if (abs(pl.y - sprites_pos[i]->getPos().y) <= gl.sprite_size - epsilon && pl.y - sprites_pos[i]->getPos().y >= epsilon && abs(pl.x - sprites_pos[i]->getPos().x) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -95,9 +97,9 @@ bool collides_floor(int epsilon = 2, int epsilon2 = 0) {
 /// @param epsilon2 how much units player can be far away from sprite in X direction
 /// @return true, if player collides ceiling. Else false
 bool collides_ceiling(int epsilon = 2 , int epsilon2 = 0) {
-    vector sprites_pos = sg_sprites.get_current_pos();
+    vector sprites_pos = sg_sprites.get_sprites();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if ((pl.y + gl.sprite_size) - sprites_pos[i].y >= -epsilon && (pl.y + gl.sprite_size) - sprites_pos[i].y <= gl.sprite_size && abs(pl.x - sprites_pos[i].x) < gl.sprite_size) return true;
+        if ((pl.y + gl.sprite_size) - sprites_pos[i]->getPos().y >= -epsilon && (pl.y + gl.sprite_size) - sprites_pos[i]->getPos().y <= gl.sprite_size && abs(pl.x - sprites_pos[i]->getPos().x) < gl.sprite_size) return true;
     }
     return false;
 }
@@ -107,9 +109,9 @@ bool collides_ceiling(int epsilon = 2 , int epsilon2 = 0) {
 /// @param epsilon2 how much units player can be far away from sprite in Y direction
 /// @return true, if player collides left wall. Else false
 bool collides_left(int epsilon = 0, int epsilon2 = 2) {
-    vector sprites_pos = sg_sprites.get_current_pos();
+    vector sprites_pos = sg_sprites.get_sprites();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (pl.x - (sprites_pos[i].x + gl.sprite_size) <= -epsilon && pl.x - (sprites_pos[i].x + gl.sprite_size) > -2 * gl.sprite_size && abs(pl.y - sprites_pos[i].y) < gl.sprite_size - epsilon2) return true;
+        if (pl.x - (sprites_pos[i]->getPos().x + gl.sprite_size) <= -epsilon && pl.x - (sprites_pos[i]->getPos().x + gl.sprite_size) > -2 * gl.sprite_size && abs(pl.y - sprites_pos[i]->getPos().y) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -119,9 +121,9 @@ bool collides_left(int epsilon = 0, int epsilon2 = 2) {
 /// @param epsilon2 how much units player can be far away from sprite in Y direction
 /// @return true, if player collides right wall. Else false
 bool collides_right(int epsilon = 0, int epsilon2 = 2) {
-    vector sprites_pos = sg_sprites.get_current_pos();
+    vector sprites_pos = sg_sprites.get_sprites();
     for (int i = 0; i < sprites_pos.size(); i++) {
-        if (abs((pl.x + gl.sprite_size) - sprites_pos[i].x) <= -epsilon && abs(pl.y - sprites_pos[i].y) < gl.sprite_size - epsilon2) return true;
+        if (abs((pl.x + gl.sprite_size) - sprites_pos[i]->getPos().x) <= -epsilon && abs(pl.y - sprites_pos[i]->getPos().y) < gl.sprite_size - epsilon2) return true;
     }
     return false;
 }
@@ -166,9 +168,9 @@ void jump() {
 /// @param sg2 Second sprite group
 /// @return Is these groups colliding
 bool sg_collision(SprGroup& sg1, SprGroup& sg2) {
-    for (auto i : sg1.get_current_pos()) {
-        for (auto j : sg2.get_current_pos()) {
-            if (abs(i.x - j.x) <= gl.sprite_size && abs(i.y - j.y) <= gl.sprite_size) return true;
+    for (auto i : sg1.get_sprites()) {
+        for (auto j : sg2.get_sprites()) {
+            if (abs(i->getPos().x - j->getPos().x) <= gl.sprite_size && abs(i->getPos().y - j->getPos().y) <= gl.sprite_size) return true;
         }
     }
     return false;
@@ -197,6 +199,26 @@ void unpause() {
     sg_pause.delete_all();
 }
 
+void move_bullets() {
+    for (int i = 0; i < cl.max_bullets; i++) {
+        if (i >= sg_bullets.get_sprites().size()) continue;
+
+        auto p = pl.bullets[i];
+        glm::vec2 b = sg_bullets.get_sprites()[i]->getPos();
+        auto bullet = cl.default_bullet;
+        
+        if (b.x != p.first.x || b.y != p.first.y) {
+            int x = bullet.speed * cos(glm::radians(p.second - 90.f));
+            int y = bullet.speed * sin(glm::radians(p.second - 90.f));
+
+            sg_bullets.move(i, b.x + x, b.y + y);
+        } else {
+            sg_bullets.delete_sprite(i);
+            pl.bullets.erase(pl.bullets.begin() + i);
+        }
+    }
+}
+
 /// @brief Proceeds once key pressings (if key was hold down for a long it's still will be recognize as once pressing)
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
@@ -211,16 +233,22 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
         pl.noclip = !pl.noclip;
     }
 
-    if (key == KEY_G && action == 1) {
-        cout << collides_left() << endl;
-    }
-
     #ifndef online
         if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
             cl.paused = !cl.paused;
             if (cl.paused) pause();
         } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
     #endif
+
+    if (key == 'E' && action == 1) {
+        sg_bullets.delete_all();
+        pl.bullets.clear();
+    }
+
+    if (key == 'G' && action == 1) {
+        cout << pl.bullets[0].first.x << ", " << pl.bullets[0].first.y << endl;
+        cout << sg_bullets.get_sprites()[0]->getPos().x << ", " << sg_bullets.get_sprites()[0]->getPos().y << endl;
+    }
 }
 
 /// @brief Sets player animation to stand in the right direction
@@ -234,7 +262,7 @@ void set_stand_anim() {
 }
 
 /// @brief Proceeds a Net realtion beetween 2 players
-/// @warning Start this function only in separate thread!
+/// @warning Use this function only in separate thread!
 /// @param cli pointer to the current Net Handler
 void netloop(NetHandler* cli) {
     while (true) {
@@ -268,6 +296,26 @@ void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
         pl.moving = false;
     }
+
+    if (glfwGetMouseButton(win, MOUSE_LEFT) == GLFW_PRESS && sg_bullets.get_sprites().size() < cl.max_bullets) {
+        glm::vec2 p((pl.x + gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size + gl.sprite_size / 2, (pl.y + gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size + gl.sprite_size / 2);
+        glm::vec2 c((cur.x - gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size, (cur.y - gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size);
+        auto k = (p.y - c.y) / (p.x - c.x);
+        auto deg = glm::degrees(atan(k)) + 90.f;
+        if (pl.look == l_left && c.x <= p.x) {
+            sg_bullets.add_sprite("Bullet", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, deg, p.x - 40, p.y - 40);
+            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, p.x - 40, p.y - 40);
+            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, c.x, c.y);
+            pl.bullets.push_back(BPair(c, deg));
+            pl.bullets.push_back(BPair(c, deg));
+        } else if (pl.look == l_right && c.x >= p.x) {
+            sg_bullets.add_sprite("Bullet", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, deg - 180.f, p.x - 40, p.y - 40);
+            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, p.x - 40, p.y - 40);
+            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, c.x, c.y);
+            pl.bullets.push_back(BPair(c, deg));
+            pl.bullets.push_back(BPair(c, deg));
+        }
+    }
 }
 
 int main(int argc, char const *argv[]) {
@@ -294,6 +342,8 @@ int main(int argc, char const *argv[]) {
     cl.jump_height = 160;
     cl.gravity = 9.80665f;
     cl.server = false;
+    cl.default_bullet = Bullet(5, 10.f);
+    cl.max_bullets = 2;
 
     pl.x = 0;
     pl.y = 80;
@@ -365,10 +415,11 @@ int main(int argc, char const *argv[]) {
         rm_main = ResourceManager(argv[0]); // Binding all classes together
         tl_main = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
-        sg_player = AnimSprGroup(&rm_main);
-        sg_player2 = AnimSprGroup(&rm_main);
+        sg_player = SprGroup(&rm_main);
+        sg_player2 = SprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
         sg_pause = SprGroup(&rm_main);
+        sg_bullets = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
         kh_main = KeyHandler(window);
 
@@ -395,6 +446,7 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->setInt("tex", 0);
 
         pars_main.parse_lvl("res/lvl/level.json", &gl.sprite_size); // Parsing level
+        tl_main.add_texture("Bullet", "res/textures/bullet.png");
         tl_main.add_textures_from_atlas("Player", "res/textures/player.png", { "stand_right", "stand_left", "walk1_right", "walk1_left", "walk2_right", "walk2_left", "jump_right", "jump_left" }, glm::vec2(16, 16));
 
         sg_player.add_sprite("Player", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl.x, pl.y); // Adding Player 1 sprite
@@ -451,8 +503,8 @@ int main(int argc, char const *argv[]) {
 
         // Binding keys (some functions are still in older Key Handler)
         kh_main.bind(KEY_SPACE, [](){ if (!pl.jumping) { std::thread t(jump); t.detach(); } });
-        kh_main.bind('0', [](){ cam.mag -= cam.mag_speed; });
-        kh_main.bind('9', [](){ cam.mag += cam.mag_speed; });
+        kh_main.bind('=', [](){ cam.mag -= cam.mag_speed; });
+        kh_main.bind('-', [](){ cam.mag += cam.mag_speed; });
         kh_main.bind(KEY_UP, [](){ cam.y += cam.speed; });
         kh_main.bind(KEY_DOWN, [](){ cam.y -= cam.speed; });
         kh_main.bind(KEY_RIGHT, [](){ cam.x += cam.speed; });
@@ -496,7 +548,8 @@ int main(int argc, char const *argv[]) {
             if (!cl.paused) {
                 fall(); // Always falling down
                 prevent_clipping(); // Prevent player from clipping through walls
-                set_stand_anim(); 
+                set_stand_anim();
+                move_bullets();
 
                 sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
                 sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
@@ -518,6 +571,11 @@ int main(int argc, char const *argv[]) {
             sg_player2.render_all();
             sg_text.render_all();
             sg_pause.render_all();
+            
+            double cx, cy;
+            glfwGetCursorPos(window, &cx, &cy);
+            cur.x = cx + cam.x;
+            cur.y = Size.y - cy + cam.y;
 
             sleep(1); // 1ms delay
             glfwSwapBuffers(window); // Swapping front and back buffers
@@ -530,6 +588,7 @@ int main(int argc, char const *argv[]) {
         sg_player2.delete_all();
         sg_text.delete_all();
         sg_pause.delete_all();
+        sg_bullets.delete_all();
     }
 
 
