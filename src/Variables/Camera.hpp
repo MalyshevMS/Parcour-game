@@ -1,3 +1,4 @@
+#pragma once
 struct Camera {
     float x = 0; // Camera X pos
     float y = 0; // Camera Y pos

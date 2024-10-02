@@ -1,3 +1,4 @@
+#pragma once
 struct Client {
     int max_speed = 10; // Max player movement speed
     int jump_speed = 5; // Player(s) jump speed
