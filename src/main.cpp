@@ -25,7 +25,6 @@
 #include "Variables/Client.hpp"
 #include "Variables/Player.hpp"
 #include "Variables/Cursor.hpp"
-#include "Variables/Bullet.hpp"
 
 #include "keys"
 
@@ -199,26 +198,6 @@ void unpause() {
     sg_pause.delete_all();
 }
 
-void move_bullets() {
-    for (int i = 0; i < cl.max_bullets; i++) {
-        if (i >= sg_bullets.get_sprites().size()) continue;
-
-        auto p = pl.bullets[i];
-        glm::vec2 b = sg_bullets.get_sprites()[i]->getPos();
-        auto bullet = cl.default_bullet;
-        
-        if (b.x != p.first.x || b.y != p.first.y) {
-            int x = bullet.speed * cos(glm::radians(p.second - 90.f));
-            int y = bullet.speed * sin(glm::radians(p.second - 90.f));
-
-            sg_bullets.move(i, b.x + x, b.y + y);
-        } else {
-            sg_bullets.delete_sprite(i);
-            pl.bullets.erase(pl.bullets.begin() + i);
-        }
-    }
-}
-
 /// @brief Proceeds once key pressings (if key was hold down for a long it's still will be recognize as once pressing)
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
@@ -239,16 +218,6 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
             if (cl.paused) pause();
         } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
     #endif
-
-    if (key == 'E' && action == 1) {
-        sg_bullets.delete_all();
-        pl.bullets.clear();
-    }
-
-    if (key == 'G' && action == 1) {
-        cout << pl.bullets[0].first.x << ", " << pl.bullets[0].first.y << endl;
-        cout << sg_bullets.get_sprites()[0]->getPos().x << ", " << sg_bullets.get_sprites()[0]->getPos().y << endl;
-    }
 }
 
 /// @brief Sets player animation to stand in the right direction
@@ -296,26 +265,6 @@ void keyHandler(GLFWwindow* win) {
     if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
         pl.moving = false;
     }
-
-    if (glfwGetMouseButton(win, MOUSE_LEFT) == GLFW_PRESS && sg_bullets.get_sprites().size() < cl.max_bullets) {
-        glm::vec2 p((pl.x + gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size + gl.sprite_size / 2, (pl.y + gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size + gl.sprite_size / 2);
-        glm::vec2 c((cur.x - gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size, (cur.y - gl.sprite_size / 2) / gl.sprite_size * gl.sprite_size);
-        auto k = (p.y - c.y) / (p.x - c.x);
-        auto deg = glm::degrees(atan(k)) + 90.f;
-        if (pl.look == l_left && c.x <= p.x) {
-            sg_bullets.add_sprite("Bullet", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, deg, p.x - 40, p.y - 40);
-            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, p.x - 40, p.y - 40);
-            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, c.x, c.y);
-            pl.bullets.push_back(BPair(c, deg));
-            pl.bullets.push_back(BPair(c, deg));
-        } else if (pl.look == l_right && c.x >= p.x) {
-            sg_bullets.add_sprite("Bullet", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, deg - 180.f, p.x - 40, p.y - 40);
-            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, p.x - 40, p.y - 40);
-            sg_bullets.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, c.x, c.y);
-            pl.bullets.push_back(BPair(c, deg));
-            pl.bullets.push_back(BPair(c, deg));
-        }
-    }
 }
 
 int main(int argc, char const *argv[]) {
@@ -342,8 +291,6 @@ int main(int argc, char const *argv[]) {
     cl.jump_height = 160;
     cl.gravity = 9.80665f;
     cl.server = false;
-    cl.default_bullet = Bullet(5, 10.f);
-    cl.max_bullets = 2;
 
     pl.x = 0;
     pl.y = 80;
@@ -549,7 +496,6 @@ int main(int argc, char const *argv[]) {
                 fall(); // Always falling down
                 prevent_clipping(); // Prevent player from clipping through walls
                 set_stand_anim();
-                move_bullets();
 
                 sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
                 sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
