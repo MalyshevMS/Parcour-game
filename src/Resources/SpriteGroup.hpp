@@ -8,6 +8,7 @@
 
 #include "ResourceManager.hpp"
 #include "../Renderer/Sprite.hpp"
+#include "../Variables/Cursor.hpp"
 
 void sleep(unsigned int milliseconds) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
@@ -67,8 +68,24 @@ public:
         }
     };
 
+    void hide(int spr_num) {
+        sprites[spr_num]->_render = false;
+    };
+
+    void show(int spr_num) {
+        sprites[spr_num]->_render = true;
+    };
+
     void set_timer() {
         last = std::chrono::high_resolution_clock::now();
+    };
+
+    bool hovered(int spr_num, Cursor& c) {
+        if (!sprites[spr_num]->_render) return false;
+        if (c.x >= sprites[spr_num]->getPos().x && c.x <= sprites[spr_num]->getPos().x + sprites[spr_num]->getSize().x && \
+            c.y >= sprites[spr_num]->getPos().y && c.y <= sprites[spr_num]->getPos().y + sprites[spr_num]->getSize().y) {
+                return true;
+        } else return false;
     };
 
     void move_all(int x, int y) {

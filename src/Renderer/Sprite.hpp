@@ -20,6 +20,7 @@ namespace Renderer  {
         GLuint _vertexCoordsVBO;
         GLuint _texCoordsVBO;
     public:
+        bool _render = true;
         Sprite(const std::shared_ptr<Texture2D>& tex, const std::string& subtexture, const std::shared_ptr<ShaderProgram>& shader_prog, const glm::vec2& pos, const glm::vec2& size, const float& rotation) {
             _tex = std::move(tex);
             _shader_prog = std::move(shader_prog);
@@ -83,6 +84,8 @@ namespace Renderer  {
         Sprite& operator=(const Sprite&) = delete;
 
         virtual void render() const {
+            if (!_render) return;
+            
             _shader_prog->use();
 
             glm::mat4 model(1.f);

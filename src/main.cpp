@@ -57,7 +57,7 @@ TexLoader tl_main; // Main Texture loader
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
 SprGroup sg_text; // Group for text rendering
 SprGroup sg_pause; // Group for text while pauses
-SprGroup sg_bullets; // Group for bullets
+SprGroup sg_buttons; // Group for buttons
 SprGroup sg_player; // Group for Player 1
 SprGroup sg_player2; // Group for Player 2
 
@@ -198,28 +198,6 @@ void unpause() {
     sg_pause.delete_all();
 }
 
-/// @brief Proceeds once key pressings (if key was hold down for a long it's still will be recognize as once pressing)
-void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
-    if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
-        cam.locked = !cam.locked;
-    }
-
-    if (key == KEY_Q && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(win, GL_TRUE);
-    }
-
-    if (key == KEY_B && action == GLFW_PRESS) {
-        pl.noclip = !pl.noclip;
-    }
-
-    #ifndef online
-        if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
-            cl.paused = !cl.paused;
-            if (cl.paused) pause();
-        } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
-    #endif
-}
-
 /// @brief Sets player animation to stand in the right direction
 void set_stand_anim() {
     if (!pl.moving && !pl.jumping) {
@@ -243,27 +221,83 @@ void netloop(NetHandler* cli) {
     }
 }
 
+/// @brief Proceeds once key pressings (if key was hold down for a long it's still will be recognize as once pressing)
+void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
+    if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
+        cam.locked = !cam.locked;
+    }
+
+    if (key == KEY_Q && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(win, GL_TRUE);
+    }
+
+    if (key == KEY_B && action == GLFW_PRESS) {
+        pl.noclip = !pl.noclip;
+    }
+
+    #ifndef online
+        if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
+            cl.paused = !cl.paused;
+            if (cl.paused) pause();
+        } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
+    #endif
+
+    if (key == 'G' && action == 1) {
+        cout << cur.x << ", " << cur.y << endl;
+        cout << sg_buttons.get_sprites()[0]->getPos().x << ", " << sg_buttons.get_sprites()[0]->getPos().y << endl;
+    }
+}
+
 /// @brief Function for proceeding keys pressing. P.S. This function supports long key pressing
 /// @param win GLFW window pointer
 void keyHandler(GLFWwindow* win) {
-    if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
-        pl.moving = true;
-        pl.look = l_left;
-        if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
-        pl.x -= cl.max_speed;
-        if (cam.locked) cam.x -= cl.max_speed;
-    }
+    if (cl.in_game) {
+        if (glfwGetKey(win, KEY_A) == GLFW_PRESS && (pl.noclip ? true : !collides_left())) {
+            pl.moving = true;
+            pl.look = l_left;
+            if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
+            pl.x -= cl.max_speed;
+            if (cam.locked) cam.x -= cl.max_speed;
+        }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
-        pl.moving = true;
-        pl.look = l_right;
-        if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
-        pl.x += cl.max_speed;
-        if (cam.locked) cam.x += cl.max_speed;
-    }
+        if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
+            pl.moving = true;
+            pl.look = l_right;
+            if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
+            pl.x += cl.max_speed;
+            if (cam.locked) cam.x += cl.max_speed;
+        }
 
-    if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
-        pl.moving = false;
+        if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
+            pl.moving = false;
+        }
+    } else {
+        if (glfwGetMouseButton(win, MOUSE_LEFT)) {
+            if (sg_buttons.hovered(0, cur)) {
+                glfwSetWindowShouldClose(win, GL_TRUE);
+            }
+
+            if (sg_buttons.hovered(1, cur)) {
+                cout << "Name: " << pl.name << endl;
+                cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
+                cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
+                cout << "Online: \n\tServer: " << cl.server << "\n\tIP: " << cl.ip << "\n\tPort: " << cl.port << endl;
+                sg_buttons.hide(1);
+                sleep(100);
+                sg_buttons.show(1);
+            }
+
+            if (sg_buttons.hovered(2, cur)) {
+                cout << "Game starts in... 3" << endl;
+                sleep(1000);
+                cout << "Game starts in... 2" << endl;
+                sleep(1000);
+                cout << "Game starts in... 1" << endl;
+                sleep(1000);
+                cl.in_game = true;
+                for (int i = 0; i < sg_buttons.get_sprites().size(); i++) sg_buttons.hide(i);
+            }
+        }
     }
 }
 
@@ -291,6 +325,8 @@ int main(int argc, char const *argv[]) {
     cl.jump_height = 160;
     cl.gravity = 9.80665f;
     cl.server = false;
+    cl.paused = false;
+    cl.in_game = false;
 
     pl.x = 0;
     pl.y = 80;
@@ -366,7 +402,7 @@ int main(int argc, char const *argv[]) {
         sg_player2 = SprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
         sg_pause = SprGroup(&rm_main);
-        sg_bullets = SprGroup(&rm_main);
+        sg_buttons = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
         kh_main = KeyHandler(window);
 
@@ -431,17 +467,16 @@ int main(int argc, char const *argv[]) {
 
         // Parsing server.cfg
         string f = rm_main.getFileStr("server.cfg");
-        string ip = f.substr(f.find("=") + 1, f.find(":") - f.find("=") - 1);
-        unsigned short port = stoi(f.substr(f.find(":") + 1, f.find("\n") - f.find(":") - 1));
+        cl.ip = f.substr(f.find("=") + 1, f.find(":") - f.find("=") - 1);
+        cl.port = stoi(f.substr(f.find(":") + 1, f.find("\n") - f.find(":") - 1));
         f = f.substr(f.find("\n") + 1);
         string mode = f.substr(f.find("=") + 1, f.find("\n") - f.find("=") - 1);
-        mode.pop_back();
         pl.name = f.substr(f.rfind("=") + 1, f.rfind("\n") - f.rfind("=") - 1);
         cl.server = mode == "host" ? true : false;
 
 
         #ifdef online
-            NetHandler cli(ip, port, cl.server); // Creating client
+            NetHandler cli(cl.ip, cl.port, cl.server); // Creating client
             cli.send_msg(pl.name);
             pl2.name = cli.recv_msg();
             sg_player2.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl2.name.size(), gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2 - 5, pl2.y + gl.sprite_size);
@@ -469,12 +504,20 @@ int main(int argc, char const *argv[]) {
         sg_player.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl.name.size(), gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2 - 5, pl.y + gl.sprite_size);
         sg_player.add_text("Font", pl.name, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2, pl.y + gl.sprite_size);
 
+        sg_buttons.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size * 3, gl.sprite_size, 0.f, cam.x + 10, cam.y + 160);
+        sg_buttons.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size * 3, gl.sprite_size, 0.f, cam.x + 10, cam.y + 250);
+        sg_buttons.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size * 3, gl.sprite_size, 0.f, cam.x + 10, cam.y + 340);
+
+        sg_buttons.add_text("Font", "quit", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 50, cam.y + 160 + 20);
+        sg_buttons.add_text("Font", "setting", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 20, cam.y + 250 + 20);
+        sg_buttons.add_text("Font", "play", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 50, cam.y + 340 + 20);
+
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
             if (!cl.paused) {
                 keyHandler(window); // Setting (old) key handler
-                kh_main.use(); // Setting (new) key handler
+                kh_main.use(cl); // Setting (new) key handler
             }
 
             // Projection matrix variables
@@ -517,6 +560,7 @@ int main(int argc, char const *argv[]) {
             sg_player2.render_all();
             sg_text.render_all();
             sg_pause.render_all();
+            sg_buttons.render_all();
             
             double cx, cy;
             glfwGetCursorPos(window, &cx, &cy);
@@ -534,7 +578,7 @@ int main(int argc, char const *argv[]) {
         sg_player2.delete_all();
         sg_text.delete_all();
         sg_pause.delete_all();
-        sg_bullets.delete_all();
+        sg_buttons.delete_all();
     }
 
 
