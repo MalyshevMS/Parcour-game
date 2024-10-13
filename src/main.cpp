@@ -132,6 +132,7 @@ bool collides_right(int epsilon = 0, int epsilon2 = 2) {
 void prevent_clipping() {
     if (!pl.noclip) {
         if (collides_floor(1)) pl.y++;
+        pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
     }
 }
 
@@ -155,6 +156,7 @@ void jump() {
         while (pl.y < height && !collides_ceiling()) {
             pl.y += -g(__ticks2) + cl.gravity;
             __ticks2++;
+            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
             sleep(1);
         }
         pl.jumping = false;
@@ -181,6 +183,7 @@ void fall() {
         if (g(__ticks) < cl.max_speed) pl.y -= g(__ticks);
         else pl.y -= cl.max_speed;
         __ticks++;
+        pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
     } else __ticks = 0;
 }
 
@@ -213,11 +216,35 @@ void set_stand_anim() {
 /// @param cli pointer to the current Net Handler
 void netloop(NetHandler* cli) {
     while (true) {
-        cli->send_msg(to_string(pl.x) + "/" + to_string(pl.y) + "/" + pl.current_anim);
+        cli->send_msg(pl.msg);
         auto msg = cli->recv_msg();
-        pl2.x = stoi(msg.substr(0, msg.find_first_of("/")));
-        pl2.y = stoi(msg.substr(msg.find_first_of("/") + 1, msg.find_last_of("/")));
-        pl2.current_anim = msg.substr(msg.find_last_of("/") + 1);
+
+        switch (msg[0]) {
+            case '+': {
+                msg.erase(msg.begin());
+                auto com = msg.substr(0, msg.find(":"));
+                auto args = msg.substr(msg.find(":") + 1);
+
+                if (com == "move") {
+                    pl2.x = stoi(args.substr(0, args.find(",")));
+                    pl2.y = stoi(args.substr(args.find(",") + 1, args.rfind(",")));
+                    pl2.current_anim = args.substr(args.rfind(",") + 1);
+                }
+
+                if (com == "block") {
+                    glm::vec2 b;
+                    b.x = stoi(args.substr(0, args.find(",")));
+                    b.y = stoi(args.substr(args.find(",") + 1));
+                    sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, b.x, b.y);
+                    sg_sprites.render_all();
+                }
+            } break;
+
+            case '!': {
+                msg.erase(msg.begin());
+                cout << msg << endl;
+            } break;
+        }
     }
 }
 
@@ -225,10 +252,6 @@ void netloop(NetHandler* cli) {
 void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode) {
     if (key == KEY_LEFT_ALT && action == GLFW_PRESS) {
         cam.locked = !cam.locked;
-    }
-
-    if (key == KEY_Q && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(win, GL_TRUE);
     }
 
     if (key == KEY_B && action == GLFW_PRESS) {
@@ -241,8 +264,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
     if (key == 'G' && action == 1) {
-        cout << cur.x << ", " << cur.y << endl;
-        cout << sg_buttons.get_sprites()[0]->getPos().x << ", " << sg_buttons.get_sprites()[0]->getPos().y << endl;
+        cout << pl.msg << endl;
     }
 }
 
@@ -256,6 +278,7 @@ void keyHandler(GLFWwindow* win) {
             if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
             pl.x -= cl.max_speed;
             if (cam.locked) cam.x -= cl.max_speed;
+            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
         }
 
         if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
@@ -264,10 +287,22 @@ void keyHandler(GLFWwindow* win) {
             if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
             pl.x += cl.max_speed;
             if (cam.locked) cam.x += cl.max_speed;
+            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
         }
 
         if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
             pl.moving = false;
+        }
+
+        if (glfwGetMouseButton(win, MOUSE_RIGHT)) {
+            glm::vec2 block;
+            block.x = cur.x / gl.sprite_size * gl.sprite_size;
+            block.y = cur.y / gl.sprite_size * gl.sprite_size;
+            for (auto i : sg_sprites.get_sprites()) {
+                if (i->getPos().x == block.x && i->getPos().y == block.y) return;
+            }
+            sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, block.x, block.y);
+            pl.msg = string("+block:") + to_string((int)block.x) + "," + to_string((int)block.y);
         }
     } else {
         if (glfwGetMouseButton(win, MOUSE_LEFT)) {
