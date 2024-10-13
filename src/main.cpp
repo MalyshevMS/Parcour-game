@@ -288,13 +288,8 @@ void keyHandler(GLFWwindow* win) {
             }
 
             if (sg_buttons.hovered(2, cur)) {
-                cout << "Game starts in... 3" << endl;
-                sleep(1000);
-                cout << "Game starts in... 2" << endl;
-                sleep(1000);
-                cout << "Game starts in... 1" << endl;
-                sleep(1000);
-                cl.in_game = true;
+                cl.paused = false;
+                unpause();
                 for (int i = 0; i < sg_buttons.get_sprites().size(); i++) sg_buttons.hide(i);
             }
         }
@@ -325,7 +320,7 @@ int main(int argc, char const *argv[]) {
     cl.jump_height = 160;
     cl.gravity = 9.80665f;
     cl.server = false;
-    cl.paused = false;
+    cl.paused = true;
     cl.in_game = false;
 
     pl.x = 0;
@@ -515,10 +510,8 @@ int main(int argc, char const *argv[]) {
         while (!glfwWindowShouldClose(window)) { // Main game loop
             glClear(GL_COLOR_BUFFER_BIT);
 
-            if (!cl.paused) {
-                keyHandler(window); // Setting (old) key handler
-                kh_main.use(cl); // Setting (new) key handler
-            }
+            keyHandler(window); // Setting (old) key handler
+            kh_main.use(cl); // Setting (new) key handler
 
             // Projection matrix variables
             float projMat_right  = Size.x * cam.mag + cam.x;
@@ -535,24 +528,34 @@ int main(int argc, char const *argv[]) {
             defaultShaderProgram->use(); // Using default shader
             tl_main.bind_all(); // Binding all textures
 
-            if (!cl.paused) {
+            cl.in_game = !cl.paused;
+            
+            if (cl.in_game) {
                 fall(); // Always falling down
                 prevent_clipping(); // Prevent player from clipping through walls
                 set_stand_anim();
 
-                sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
-                sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
-                sg_player.set_animation(0, pl.current_anim); // Setting animation (Player 1)
-
-                #ifdef online
-                    sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
-                    sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
-                    sg_player2.set_animation(0, pl2.current_anim); // Setting animation (Player 2)
-                #endif
-
-                sg_player.update_all();
-                sg_player2.update_all();            
+                for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
+                    sg_buttons.hide(i);
+                }
+            } else {
+                for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
+                    sg_buttons.show(i);
+                }
             }
+
+            sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
+            sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
+            sg_player.set_animation(0, pl.current_anim); // Setting animation (Player 1)
+
+            #ifdef online
+                sg_player2.rotate_all(180 - cam.rot); // Setting rotation (Player 2)
+                sg_player2.set_pos(pl2.x, pl2.y); // Setting position (Player 2)
+                sg_player2.set_animation(0, pl2.current_anim); // Setting animation (Player 2)
+            #endif
+
+            sg_player.update_all();
+            sg_player2.update_all();
 
             // Rendering all sprites
             sg_sprites.render_all();
@@ -561,6 +564,8 @@ int main(int argc, char const *argv[]) {
             sg_text.render_all();
             sg_pause.render_all();
             sg_buttons.render_all();
+
+            sg_buttons.set_pos(cam.x + 10, cam.y + 160);
             
             double cx, cy;
             glfwGetCursorPos(window, &cx, &cy);
