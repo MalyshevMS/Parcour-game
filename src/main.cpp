@@ -1,6 +1,6 @@
 // #define debug
 // #define fullscreen
-// #define online
+#define online
 
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
@@ -235,12 +235,10 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
         pl.noclip = !pl.noclip;
     }
 
-    #ifndef online
-        if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
-            cl.paused = !cl.paused;
-            if (cl.paused) pause();
-        } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
-    #endif
+    if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_PRESS) {
+        cl.paused = !cl.paused;
+        if (cl.paused) pause();
+    } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
     if (key == 'G' && action == 1) {
         cout << cur.x << ", " << cur.y << endl;
@@ -531,9 +529,11 @@ int main(int argc, char const *argv[]) {
             cl.in_game = !cl.paused;
             
             if (cl.in_game) {
-                fall(); // Always falling down
-                prevent_clipping(); // Prevent player from clipping through walls
-                set_stand_anim();
+                #ifndef online
+                    fall(); // Always falling down
+                    prevent_clipping(); // Prevent player from clipping through walls
+                    set_stand_anim();
+                #endif
 
                 for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
                     sg_buttons.hide(i);
@@ -543,6 +543,12 @@ int main(int argc, char const *argv[]) {
                     sg_buttons.show(i);
                 }
             }
+
+            #ifdef online
+                fall(); // Always falling down
+                prevent_clipping(); // Prevent player from clipping through walls
+                set_stand_anim();
+            #endif
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
