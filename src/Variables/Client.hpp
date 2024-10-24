@@ -10,6 +10,7 @@ struct Client {
     bool server = false; // Is this a client or host
     bool paused = true; // Is game paused
     bool in_game = false; // Is in game or in menu
+    bool placed_block = false; // Is block placed
     std::string ip; // Server IP
     unsigned short port; // Server port
 };

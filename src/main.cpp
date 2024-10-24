@@ -46,7 +46,6 @@ using DPair = pair<string, uint64_t>;
 OpenGL gl;
 Camera cam;
 Client cl;
-Cursor cur;
 Player pl;
 Player pl2;
 
@@ -211,6 +210,16 @@ void set_stand_anim() {
     }
 }
 
+void check_block_placement() {
+    if (cl.placed_block) {
+        for (auto i : sg_sprites.get_sprites()) {
+            if (i->getPos().x == pl2.cur.x && i->getPos().y == pl2.cur.y) return;
+        }
+        sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.cur.x, pl2.cur.y);
+        cl.placed_block = false;
+    }
+}
+
 /// @brief Proceeds a Net realtion beetween 2 players
 /// @warning Use this function only in separate thread!
 /// @param cli pointer to the current Net Handler
@@ -232,11 +241,9 @@ void netloop(NetHandler* cli) {
                 }
 
                 if (com == "block") {
-                    glm::vec2 b;
-                    b.x = stoi(args.substr(0, args.find(",")));
-                    b.y = stoi(args.substr(args.find(",") + 1));
-                    sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, b.x, b.y);
-                    sg_sprites.render_all();
+                    pl2.cur.x = stoi(args.substr(0, args.find(",")));
+                    pl2.cur.y = stoi(args.substr(args.find(",") + 1));
+                    cl.placed_block = true;
                 }
             } break;
 
@@ -264,7 +271,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
     if (key == 'G' && action == 1) {
-        cout << pl.msg << endl;
+
     }
 }
 
@@ -296,8 +303,8 @@ void keyHandler(GLFWwindow* win) {
 
         if (glfwGetMouseButton(win, MOUSE_RIGHT)) {
             glm::vec2 block;
-            block.x = cur.x / gl.sprite_size * gl.sprite_size;
-            block.y = cur.y / gl.sprite_size * gl.sprite_size;
+            block.x = pl.cur.x / gl.sprite_size * gl.sprite_size;
+            block.y = pl.cur.y / gl.sprite_size * gl.sprite_size;
             for (auto i : sg_sprites.get_sprites()) {
                 if (i->getPos().x == block.x && i->getPos().y == block.y) return;
             }
@@ -306,11 +313,11 @@ void keyHandler(GLFWwindow* win) {
         }
     } else {
         if (glfwGetMouseButton(win, MOUSE_LEFT)) {
-            if (sg_buttons.hovered(0, cur)) {
+            if (sg_buttons.hovered(0, pl.cur)) {
                 glfwSetWindowShouldClose(win, GL_TRUE);
             }
 
-            if (sg_buttons.hovered(1, cur)) {
+            if (sg_buttons.hovered(1, pl.cur)) {
                 cout << "Name: " << pl.name << endl;
                 cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
                 cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
@@ -320,7 +327,7 @@ void keyHandler(GLFWwindow* win) {
                 sg_buttons.show(1);
             }
 
-            if (sg_buttons.hovered(2, cur)) {
+            if (sg_buttons.hovered(2, pl.cur)) {
                 cl.paused = false;
                 unpause();
                 for (int i = 0; i < sg_buttons.get_sprites().size(); i++) sg_buttons.hide(i);
@@ -583,6 +590,7 @@ int main(int argc, char const *argv[]) {
                 fall(); // Always falling down
                 prevent_clipping(); // Prevent player from clipping through walls
                 set_stand_anim();
+                check_block_placement();
             #endif
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
@@ -610,8 +618,8 @@ int main(int argc, char const *argv[]) {
             
             double cx, cy;
             glfwGetCursorPos(window, &cx, &cy);
-            cur.x = cx + cam.x;
-            cur.y = Size.y - cy + cam.y;
+            pl.cur.x = cx + cam.x;
+            pl.cur.y = Size.y - cy + cam.y;
 
             sleep(1); // 1ms delay
             glfwSwapBuffers(window); // Swapping front and back buffers
