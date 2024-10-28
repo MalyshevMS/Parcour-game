@@ -11,7 +11,7 @@ struct Player {
     int look = l_left; // Player looking direction
     std::string current_anim = ""; // Player current animation
     std::string name = ""; // Player nickname
-    std::string msg = "! "; // Player current message
+    std::string msg = ""; // Player current message
     Cursor cur; // Player cursor position
     bool moving = false; // Player moving flag
     bool jumping = false; // Player jumping flag

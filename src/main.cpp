@@ -18,6 +18,7 @@
 #include "Resources/SpriteGroup.hpp"
 #include "Resources/Parser.hpp"
 #include "Other/KeyHandler.hpp"
+#include "Other/Console.hpp"
 #include "Online/NetHandler.hpp"
 
 #include "Variables/OpenGL.hpp" // variables
@@ -63,6 +64,8 @@ SprGroup sg_player2; // Group for Player 2
 Parser pars_main; // Main parser
 
 KeyHandler kh_main; // Main Key Handler
+
+Console cmd(&cl);
 
 float __ticks;
 float __ticks2;
@@ -227,31 +230,8 @@ void netloop(NetHandler* cli) {
     while (true) {
         cli->send_msg(pl.msg);
         auto msg = cli->recv_msg();
-
-        switch (msg[0]) {
-            case '+': {
-                msg.erase(msg.begin());
-                auto com = msg.substr(0, msg.find(":"));
-                auto args = msg.substr(msg.find(":") + 1);
-
-                if (com == "move") {
-                    pl2.x = stoi(args.substr(0, args.find(",")));
-                    pl2.y = stoi(args.substr(args.find(",") + 1, args.rfind(",")));
-                    pl2.current_anim = args.substr(args.rfind(",") + 1);
-                }
-
-                if (com == "block") {
-                    pl2.cur.x = stoi(args.substr(0, args.find(",")));
-                    pl2.cur.y = stoi(args.substr(args.find(",") + 1));
-                    cl.placed_block = true;
-                }
-            } break;
-
-            case '!': {
-                msg.erase(msg.begin());
-                cout << msg << endl;
-            } break;
-        }
+        
+        cmd.action(msg, &pl2);
     }
 }
 
@@ -369,7 +349,9 @@ int main(int argc, char const *argv[]) {
     pl2.y = 0;
     pl.look = l_left;
     pl.name = "test";
+    pl.msg = "";
     pl.current_anim = "stand_right";
+    pl.cur = Cursor();
     pl.moving = false;
     pl.jumping = false;
     pl.noclip = false;
