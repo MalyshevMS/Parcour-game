@@ -14,6 +14,14 @@ class Parser {
     SprGroup* sg = nullptr;
     OpenGL* gl = nullptr;
 public:
+    json get_json(const std::string& path) {
+        std::fstream f;
+        f.open(rm->getExePath() + path);
+        json file;
+        f >> file;
+        return file;
+    }
+
     Parser(ResourceManager* rm = nullptr, TexLoader* tx = nullptr, SprGroup* sg = nullptr, OpenGL* gl = nullptr) {
         this->rm = rm;
         this->tx = tx;
@@ -21,11 +29,14 @@ public:
         this->gl = gl;
     };
 
+    void parse_conf(const std::string& path) {
+        json file = get_json(std::move(path));
+
+
+    }
+
     void parse_player(std::string path, SprGroup* sg_p, const glm::vec2& spawn_pos) {
-        std::fstream f;
-        f.open(rm->getExePath() + path);
-        json file;
-        f >> file;
+        json file = get_json(std::move(path));
 
         std::vector <json> atl_arr = file["textures"]["atlas"];
         for (auto i : atl_arr) {
@@ -46,10 +57,7 @@ public:
     }
 
     void parse_lvl(std::string path, int* spr_size) {
-        std::fstream f;
-        f.open(rm->getExePath() + path);
-        json file;
-        f >> file;
+        json file = get_json(std::move(path));
 
         *spr_size = file["sprite.size"];
         

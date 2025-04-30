@@ -1,0 +1,28 @@
+{
+    "OpenGL": {
+        "sprite.shader": "SpriteShader",
+        "sprite.shader.vertex": "res/shaders/vSprite.cfg",
+        "sprite.shader.fragment": "res/shaders/fSprite.cfg",
+        "font.height": 40,
+        "font.width": 28
+    },
+
+    "Client": {
+        "max_speed": 10,
+        "jump.speed": 5,
+        "jump.height": 160,
+        "gravity": 9.80665,
+        "delay": 10
+    },
+
+    "Player": {
+        "spawn.x": 0, "spawn.y": 80,
+        "noclip": false
+    },
+
+    "Camera": {
+        "locked": true,
+        "mag.speed": 0.01,
+        "speed": 10
+    }
+}

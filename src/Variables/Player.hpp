@@ -12,9 +12,8 @@ struct Player {
     std::string current_anim = ""; // Player current animation
     std::string name = ""; // Player nickname
     std::string msg = ""; // Player current message
-    Cursor cur; // Player cursor position
+    Cursor cur = Cursor(); // Player cursor position
     bool moving = false; // Player moving flag
-    // bool moving_online = false; // Player moving flag (online)
     bool jumping = false; // Player jumping flag
     bool noclip = false; // Player no clipping flag
 };

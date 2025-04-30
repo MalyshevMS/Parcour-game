@@ -13,4 +13,5 @@ struct Client {
     bool placed_block = false; // Is block placed
     std::string ip; // Server IP
     unsigned short port; // Server port
+    unsigned short delay; // delay between sending messages  
 };

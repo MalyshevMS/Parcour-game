@@ -1,6 +1,5 @@
 // #define debug
-// #define fullscreen
-#define online
+// #define online
 
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
@@ -38,12 +37,6 @@
 using namespace std;
 using DPair = pair<string, uint64_t>;
 
-#ifndef fullscreen
-    glm::ivec2 Size(1280, 720);
-#else
-    glm::ivec2 Size(3840, 2160);
-#endif
-
 OpenGL gl;
 Camera cam;
 Client cl;
@@ -75,9 +68,9 @@ float __ticks2;
 /// @param width new window width
 /// @param height new window height
 void sizeHandler(GLFWwindow* win, int width, int height) {
-    Size.x = width;
-    Size.y = height;
-    glViewport(0, 0, Size.x, Size.y);
+    gl.win_size.x = width;
+    gl.win_size.y = height;
+    glViewport(0, 0, gl.win_size.x, gl.win_size.y);
 }
 
 /// @brief Checks if player collides floor
@@ -196,7 +189,7 @@ void detect_fail() {
 
 /// @brief Displays pause text
 void pause() {
-    sg_pause.add_text("Font", "Game paused.", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, Size.x / 2 + cam.x - 6 * gl.font_width, Size.y / 2 + cam.y);
+    sg_pause.add_text("Font", "Game paused.", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, gl.win_size.x / 2 + cam.x - 6 * gl.font_width, gl.win_size.y / 2 + cam.y);
 }
 
 /// @brief Deletes pause text
@@ -355,45 +348,57 @@ void keyHandler(GLFWwindow* win) {
     }
 }
 
-int main(int argc, char const *argv[]) {
-    // Engine vars
-    gl.texture_mode = GL_LINEAR;
-    gl.default_shader = "DefaultShader";
-    gl.sprite_shader = "SpriteShader";
-    gl.default_shader_path_list; // Please change this value inside of the structure
-    gl.sprite_shader_path_list; // Please change this value inside of the structure
-    gl.sprite_size = 80;
-    gl.font_height = 40;
-    gl.font_width = 28;
+void server_conf(string path) {
+    auto file = pars_main.get_json(std::move(path));
+    cl.ip = file["ip"];
+    cl.port = file["port"];
+    string mode = file["mode"];
+    cl.server = mode == "host" ? true : false;
+    pl.name = file["name"];
+}
 
-    cam.x = pl.x - Size.x / 2;
+int main(int argc, char const *argv[]) {
+    size_t found = string(argv[0]).find_last_of("/\\");
+    string exe_path = string(argv[0]).substr(0, found + 1);
+
+    std::fstream f;
+    f.open(exe_path + "config.json");
+    nlohmann::json file;
+    f >> file;
+
+    // Engine vars
+    auto _gl = file["OpenGL"];
+    gl.sprite_shader = _gl["sprite.shader"];
+    gl.sprite_shader_vertex = _gl["sprite.shader.vertex"];
+    gl.sprite_shader_fragment = _gl["sprite.shader.fragment"];
+    gl.sprite_size = 80;
+    gl.font_height = _gl["font.height"];
+    gl.font_width = _gl["font.width"];
+
+    auto _cam = file["Camera"];
+    cam.x = pl.x - gl.win_size.x / 2;
     cam.y = pl.y - gl.sprite_size;
     cam.rot = 180.f;
     cam.mag = 1.f;
-    cam.speed = 10.f;
-    cam.mag_speed = 0.01f;
-    cam.locked = true;
+    cam.speed = _cam["speed"];
+    cam.mag_speed = _cam["mag.speed"];
+    cam.locked = _cam["locked"];
 
-    cl.max_speed = 10;
-    cl.jump_speed = 5;
-    cl.jump_height = 160;
-    cl.gravity = 9.80665f;
-    cl.server = false;
-    cl.paused = true;
-    cl.in_game = false;
+    auto _cl = file["Client"];
+    cl.max_speed = _cl["max_speed"];
+    cl.jump_speed = _cl["jump.speed"];
+    cl.jump_height = _cl["jump.height"];
+    cl.gravity = _cl["gravity"];
+    cl.delay = _cl["delay"];
 
-    pl.x = 0;
-    pl.y = 80;
+    auto _pl = file["Player"];
+    pl.x = _pl["spawn.x"];
+    pl.y = _pl["spawn.y"];
     pl2.x = 0;
     pl2.y = 0;
     pl.look = l_left;
-    pl.name = "test";
-    pl.msg = "";
     pl.current_anim = "stand_right";
-    pl.cur = Cursor();
-    pl.moving = false;
-    pl.jumping = false;
-    pl.noclip = false;
+    pl.noclip = _pl["noclip"];
 
     string com;
 
@@ -419,11 +424,12 @@ int main(int argc, char const *argv[]) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_MAXIMIZED, 0);
 
-    #ifdef fullscreen // Creating window (fullscreen or windowed)
-        GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
-    #else 
-        GLFWwindow* window = glfwCreateWindow(Size.x, Size.y, "ParCour game", nullptr, nullptr);
-    #endif
+    GLFWwindow* window;
+    if (gl.fullscreen) { // Creating window (fullscreen or windowed)
+        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
+    } else {
+        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, "ParCour game", nullptr, nullptr);
+    }
 
     if (!window) { // Checking for creating window
         cerr << "glfwCreateWindow failed!" << endl;
@@ -457,23 +463,12 @@ int main(int argc, char const *argv[]) {
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites, &gl);
         kh_main = KeyHandler(window);
 
-        // Creating and checking for default shader
-        auto defaultShaderProgram = rm_main.loadShaders(gl.default_shader, gl.default_shader_path_list[0], gl.default_shader_path_list[1]);
-        if (!defaultShaderProgram) {
-            cerr << "Can't create shader program!" << endl;
-            return -1;
-        }
-
         // Creating and checking for sprite shader
-        auto spriteShaderProgram = rm_main.loadShaders(gl.sprite_shader, gl.sprite_shader_path_list[0], gl.sprite_shader_path_list[1]);
+        auto spriteShaderProgram = rm_main.loadShaders(gl.sprite_shader, gl.sprite_shader_vertex, gl.sprite_shader_fragment);
         if (!spriteShaderProgram) {
             cerr << "Can't create SpriteShader" << endl;
             return -1;
         }
-
-        // Using default shader
-        defaultShaderProgram->use();
-        defaultShaderProgram->setInt("tex", 0);
 
         // Using sprite shader
         spriteShaderProgram->use();
@@ -498,15 +493,7 @@ int main(int argc, char const *argv[]) {
         tl_main.add_textures_from_atlas("Font", "res/textures/font.png", chars, glm::vec2(64, 64));
         tl_main.add_texture("Filler", "res/textures/filler.png");
 
-        // Parsing server.cfg
-        string f = rm_main.getFileStr("server.cfg");
-        cl.ip = f.substr(f.find("=") + 1, f.find(":") - f.find("=") - 1);
-        cl.port = stoi(f.substr(f.find(":") + 1, f.find("\n") - f.find(":") - 1));
-        f = f.substr(f.find("\n") + 1);
-        string mode = f.substr(f.find("=") + 1, f.find("\n") - f.find("=") - 1);
-        pl.name = f.substr(f.rfind("=") + 1, f.rfind("\n") - f.rfind("=") - 1);
-        cl.server = mode == "host" ? true : false;
-
+        server_conf("server.json"); // Parsing server.json
 
         #ifdef online
             NetHandler cli(cl.ip, cl.port, cl.server); // Creating client
@@ -524,7 +511,7 @@ int main(int argc, char const *argv[]) {
         kh_main.bind(KEY_DOWN, [](){ cam.y -= cam.speed; });
         kh_main.bind(KEY_RIGHT, [](){ cam.x += cam.speed; });
         kh_main.bind(KEY_LEFT, [](){ cam.x -= cam.speed; });
-        kh_main.bind(KEY_F1, [](){ cam.x = pl.x - Size.x / 2; cam.y = pl.y - gl.sprite_size; });
+        kh_main.bind(KEY_F1, [](){ cam.x = pl.x - gl.win_size.x / 2; cam.y = pl.y - gl.sprite_size; });
 
         sg_player.set_timer();
         sg_player2.set_timer();
@@ -534,7 +521,7 @@ int main(int argc, char const *argv[]) {
             thread thr_net(&netloop, &cli);
             thr_net.detach();
 
-            thread thr_pos(&pos_update, 1);
+            thread thr_pos(&pos_update, cl.delay);
             thr_pos.detach();
         #endif
 
@@ -560,18 +547,16 @@ int main(int argc, char const *argv[]) {
             kh_main.use(cl); // Setting (new) key handler
 
             // Projection matrix variables
-            float projMat_right  = Size.x * cam.mag + cam.x;
-            float projMat_top    = Size.y * cam.mag + cam.y;
-            float projMat_left   = - Size.x * (cam.mag - 1) + cam.x;
-            float projMat_bottom = - Size.y * (cam.mag - 1) + cam.y;
+            float projMat_right  = gl.win_size.x * cam.mag + cam.x;
+            float projMat_top    = gl.win_size.y * cam.mag + cam.y;
+            float projMat_left   = - gl.win_size.x * (cam.mag - 1) + cam.x;
+            float projMat_bottom = - gl.win_size.y * (cam.mag - 1) + cam.y;
 
             glm::mat4 projMat = glm::ortho(projMat_left, projMat_right, projMat_bottom, projMat_top, -100.f, 100.f); // Setting projection matrix
 
             // Using projection matrix
-            defaultShaderProgram->setMat4("projMat", projMat);
             spriteShaderProgram->setMat4("projMat", projMat);
 
-            defaultShaderProgram->use(); // Using default shader
             tl_main.bind_all(); // Binding all textures
 
             cl.in_game = !cl.paused;
@@ -626,7 +611,7 @@ int main(int argc, char const *argv[]) {
             double cx, cy;
             glfwGetCursorPos(window, &cx, &cy);
             pl.cur.x = cx + cam.x;
-            pl.cur.y = Size.y - cy + cam.y;
+            pl.cur.y = gl.win_size.y - cy + cam.y;
 
             sleep(1); // 1ms delay
             glfwSwapBuffers(window); // Swapping front and back buffers
