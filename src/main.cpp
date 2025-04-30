@@ -133,8 +133,9 @@ bool collides_right(int epsilon = 0, int epsilon2 = 2) {
 /// @brief Prevents player from clipping through the wall
 void prevent_clipping() {
     if (!pl.noclip) {
-        if (collides_floor(1)) pl.y++;
-        pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
+        if (collides_floor(1)) {
+            pl.y++;
+        }
     }
 }
 
@@ -158,7 +159,6 @@ void jump() {
         while (pl.y < height && !collides_ceiling()) {
             pl.y += -g(__ticks2) + cl.gravity;
             __ticks2++;
-            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
             sleep(1);
         }
         pl.jumping = false;
@@ -185,8 +185,9 @@ void fall() {
         if (g(__ticks) < cl.max_speed) pl.y -= g(__ticks);
         else pl.y -= cl.max_speed;
         __ticks++;
-        pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
-    } else __ticks = 0;
+    } else {
+        __ticks = 0;
+    }
 }
 
 void detect_fail() {
@@ -213,12 +214,34 @@ void set_stand_anim() {
     }
 }
 
+/// @brief Updates position message
+/// @param delay a delay between updating position
+/// @warning Use this function only in separate thread!
+void pos_update(int delay = 10) {
+    while (true) {
+        if (cl.placed_block) continue;
+        pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
+        sleep(delay);
+    }
+}
+
+/// @brief Places block, using the position of player cursor
+/// @param p reference to player
+void place_block(Player& p) {
+    glm::vec2 block;
+    block.x = p.cur.x / gl.sprite_size * gl.sprite_size;
+    block.y = p.cur.y / gl.sprite_size * gl.sprite_size;
+    for (auto i : sg_sprites.get_sprites()) {
+        if (i->getPos().x == block.x && i->getPos().y == block.y) return;
+    }
+    sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, block.x, block.y);
+    p.msg = string("+block:") + to_string((int)block.x) + "," + to_string((int)block.y);
+}
+
+/// @brief checks placing block by other player
 void check_block_placement() {
     if (cl.placed_block) {
-        for (auto i : sg_sprites.get_sprites()) {
-            if (i->getPos().x == pl2.cur.x && i->getPos().y == pl2.cur.y) return;
-        }
-        sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.cur.x, pl2.cur.y);
+        place_block(pl2);
         cl.placed_block = false;
     }
 }
@@ -232,6 +255,31 @@ void netloop(NetHandler* cli) {
         auto msg = cli->recv_msg();
         
         cmd.action(msg, &pl2);
+    }
+}
+
+/// @brief Proceeds a CMD interactions
+void cmdloop() {
+    string com;
+    Player* current_player = &pl;
+    while (true) {
+        cout << "Parcour-game: ";
+        getline(cin, com);
+
+        if (com == "exit" || com == "quit") exit(0);
+        if (com == "chpl") {
+            if (current_player == &pl) {
+                current_player = &pl2;
+                cmd.echo("Current player: PLAYER 2");
+            } else {
+                current_player = &pl;
+                cmd.echo("Current player: PLAYER 1");
+            }
+        }
+
+        endcmd:
+        cmd.action(com, current_player);
+        current_player->msg = com;
     }
 }
 
@@ -250,7 +298,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
         if (cl.paused) pause();
     } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
-    if (key == 'G' && action == 1) {
+    if (key == KEY_ENTER && action == GLFW_PRESS) {
 
     }
 }
@@ -265,7 +313,6 @@ void keyHandler(GLFWwindow* win) {
             if (collides_floor() || collides_floor(0)) pl.current_anim = "mleft";
             pl.x -= cl.max_speed;
             if (cam.locked) cam.x -= cl.max_speed;
-            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
         }
 
         if (glfwGetKey(win, KEY_D) == GLFW_PRESS && (pl.noclip ? true : !collides_right())) {
@@ -274,7 +321,6 @@ void keyHandler(GLFWwindow* win) {
             if (collides_floor() || collides_floor(0)) pl.current_anim = "mright";
             pl.x += cl.max_speed;
             if (cam.locked) cam.x += cl.max_speed;
-            pl.msg = string("+move:") + to_string(pl.x) + "," + to_string(pl.y) + "," + pl.current_anim;
         }
 
         if (glfwGetKey(win, KEY_D) == GLFW_RELEASE && glfwGetKey(win, KEY_A) == GLFW_RELEASE) {
@@ -282,14 +328,7 @@ void keyHandler(GLFWwindow* win) {
         }
 
         if (glfwGetMouseButton(win, MOUSE_RIGHT)) {
-            glm::vec2 block;
-            block.x = pl.cur.x / gl.sprite_size * gl.sprite_size;
-            block.y = pl.cur.y / gl.sprite_size * gl.sprite_size;
-            for (auto i : sg_sprites.get_sprites()) {
-                if (i->getPos().x == block.x && i->getPos().y == block.y) return;
-            }
-            sg_sprites.add_sprite("Wall", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, block.x, block.y);
-            pl.msg = string("+block:") + to_string((int)block.x) + "," + to_string((int)block.y);
+            place_block(pl);
         }
     } else {
         if (glfwGetMouseButton(win, MOUSE_LEFT)) {
@@ -298,10 +337,10 @@ void keyHandler(GLFWwindow* win) {
             }
 
             if (sg_buttons.hovered(1, pl.cur)) {
-                cout << "Name: " << pl.name << endl;
+                cout << "\nSettings:\nName: " << pl.name << endl;
                 cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
                 cout << "OpenGL version: " << glGetString(GL_VERSION) << endl;
-                cout << "Online: \n\tServer: " << cl.server << "\n\tIP: " << cl.ip << "\n\tPort: " << cl.port << endl;
+                cout << "Online: \n\tServer: " << cl.server << "\n\tIP: " << cl.ip << "\n\tPort: " << cl.port << endl << "Parcour-game:";
                 sg_buttons.hide(1);
                 sleep(100);
                 sg_buttons.show(1);
@@ -356,22 +395,17 @@ int main(int argc, char const *argv[]) {
     pl.jumping = false;
     pl.noclip = false;
 
-    string comand_line;
+    string com;
 
-    #ifdef debug // Debugger console (not ready yet)
+    #ifdef debug // Debugger console
         do {
-            cout << "Minimal2D > ";
-            cin >> comand_line;
+            cout << "Parcour-game: ";
+            getline(cin, com);
 
-            if (comand_line == "exit") { exit(0); }
-            else if (comand_line == "mkhost") {
-                cl.server = true;
-                cout << "Your role: Server" << endl;
-            } else if (comand_line == "rmhost") {
-                cl.server = false;
-                cout << "Your role: Client" << endl;
-            }
-        } while (comand_line != "play");
+            if (com == "$exit") return 0;
+
+            cmd.action(com, &pl);
+        } while (com != "$play");
     #endif
 
     if (!glfwInit()) { // Check for GLFW
@@ -420,7 +454,7 @@ int main(int argc, char const *argv[]) {
         sg_text = SprGroup(&rm_main);
         sg_pause = SprGroup(&rm_main);
         sg_buttons = SprGroup(&rm_main);
-        pars_main = Parser(&rm_main, &tl_main, &sg_sprites);
+        pars_main = Parser(&rm_main, &tl_main, &sg_sprites, &gl);
         kh_main = KeyHandler(window);
 
         // Creating and checking for default shader
@@ -446,31 +480,13 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->setInt("tex", 0);
 
         pars_main.parse_lvl("res/lvl/level.json", &gl.sprite_size); // Parsing level
-        tl_main.add_texture("Bullet", "res/textures/bullet.png");
-        tl_main.add_textures_from_atlas("Player", "res/textures/player.png", { "stand_right", "stand_left", "walk1_right", "walk1_left", "walk2_right", "walk2_left", "jump_right", "jump_left" }, glm::vec2(16, 16));
-
-        sg_player.add_sprite("Player", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl.x, pl.y); // Adding Player 1 sprite
-
-        sg_player.add_animation(0, "mleft", { DPair("walk1_left", 100), DPair("walk2_left", 100) });
-        sg_player.add_animation(0, "mright", { DPair("walk1_right", 100), DPair("walk2_right", 100) });
-        sg_player.add_animation(0, "jleft", { DPair("jump_left", 700) });
-        sg_player.add_animation(0, "jright", { DPair("jump_right", 700) });
-        sg_player.add_animation(0, "stand_right", { DPair("stand_right", 1) });
-        sg_player.add_animation(0, "stand_left", { DPair("stand_left", 1) });
+        pars_main.parse_player("player.json", &sg_player, glm::vec2(pl.x, pl.y));
 
         pl.current_anim = "stand_left";
         pl2.current_anim = "stand_left";
 
         #ifdef online
-            sg_player2.add_sprite("Player", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, 0.f, pl2.x, pl2.y); // Adding Player 2 sprite
-
-            sg_player2.add_animation(0, "mleft", { DPair("walk1_left", 100), DPair("walk2_left", 100) });
-            sg_player2.add_animation(0, "mright", { DPair("walk1_right", 100), DPair("walk2_right", 100) });
-            sg_player2.add_animation(0, "jleft", { DPair("jump_left", 700) });
-            sg_player2.add_animation(0, "jright", { DPair("jump_right", 700) });
-            sg_player2.add_animation(0, "stand_right", { DPair("stand_right", 1) });
-            sg_player2.add_animation(0, "stand_left", { DPair("stand_left", 1) });
-
+            pars_main.parse_player("player.json", &sg_player2, glm::vec2(pl2.x, pl2.y));
         #endif
 
         vector <string> chars;
@@ -494,9 +510,9 @@ int main(int argc, char const *argv[]) {
 
         #ifdef online
             NetHandler cli(cl.ip, cl.port, cl.server); // Creating client
-            cli.send_msg(pl.name);
+            cli.send_msg(pl.name); // Recieving nickname
             pl2.name = cli.recv_msg();
-            sg_player2.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl2.name.size(), gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2 - 5, pl2.y + gl.sprite_size);
+            sg_player2.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl2.name.size(), gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2 - 5, pl2.y + gl.sprite_size); // Creating nickname above Player 2
             sg_player2.add_text("Font", pl2.name, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl2.x - gl.font_width * (pl2.name.size() / 2) + gl.sprite_size / 2, pl2.y + gl.sprite_size);
         #endif
 
@@ -513,11 +529,19 @@ int main(int argc, char const *argv[]) {
         sg_player.set_timer();
         sg_player2.set_timer();
 
+        // Threads
         #ifdef online
-            thread t(netloop, &cli);
-            t.detach();
+            thread thr_net(&netloop, &cli);
+            thr_net.detach();
+
+            thread thr_pos(&pos_update, 1);
+            thr_pos.detach();
         #endif
 
+        thread thr_cmd(&cmdloop);
+        thr_cmd.detach();
+
+        // Adding pause menu buttons
         sg_player.add_sprite("Filler", "default", gl.sprite_shader, gl.font_width * pl.name.size(), gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2 - 5, pl.y + gl.sprite_size);
         sg_player.add_text("Font", pl.name, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, pl.x - gl.font_width * (pl.name.size() / 2) + gl.sprite_size / 2, pl.y + gl.sprite_size);
 
@@ -526,7 +550,7 @@ int main(int argc, char const *argv[]) {
         sg_buttons.add_sprite("Filler", "default", gl.sprite_shader, gl.sprite_size * 3, gl.sprite_size, 0.f, cam.x + 10, cam.y + 340);
 
         sg_buttons.add_text("Font", "quit", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 50, cam.y + 160 + 20);
-        sg_buttons.add_text("Font", "setting", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 20, cam.y + 250 + 20);
+        sg_buttons.add_text("Font", "settings", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 20, cam.y + 250 + 20);
         sg_buttons.add_text("Font", "play", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 10 + 50, cam.y + 340 + 20);
 
         while (!glfwWindowShouldClose(window)) { // Main game loop
@@ -558,22 +582,23 @@ int main(int argc, char const *argv[]) {
                     prevent_clipping(); // Prevent player from clipping through walls
                     set_stand_anim();
                 #endif
-
-                for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
-                    sg_buttons.hide(i);
+                    
+                    for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
+                        sg_buttons.hide(i);
+                    }
+                } else {
+                    for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
+                        sg_buttons.show(i);
+                    }
                 }
-            } else {
-                for (int i = 0; i < sg_buttons.get_sprites().size(); i++) {
-                    sg_buttons.show(i);
-                }
-            }
-
+                
             #ifdef online
                 fall(); // Always falling down
                 prevent_clipping(); // Prevent player from clipping through walls
                 set_stand_anim();
-                check_block_placement();
             #endif
+            
+            check_block_placement();
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)

@@ -1,158 +1,140 @@
 {
     "sprite.size": 80,
     "textures": {
-        "count": 2,
         "array": [
             {
                 "name": "Wall",
                 "path": "res/textures/wall.png"
             },
             {
-                "name": "Player",
-                "path": "res/textures/player.png"
+                "name": "Bullet",
+                "path": "res/textures/bullet.png"
             }
+        ],
+        "atlas": [
         ]
     },
+
     "level": [
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 0, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 80, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 160, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 240, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 320, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 400, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 480, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 560, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 640, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 720, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 800, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 800, "y": 80,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 800, "y": 160,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 720, "y": 160,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 880, "y": 0,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 720, "y": 240,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 640, "y": 160,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 720, "y": 400,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 800, "y": 400,
-            "rot": 0.0,
-            "end": false
+            "rot": 0.0
         },
         {
             "tex": "Wall", 
             "size.x": 80, "size.y": 80,
             "x": 880, "y": 400,
-            "rot": 0.0,
-            "end": true
+            "rot": 0.0
         }
     ]
 }

@@ -54,6 +54,10 @@ public:
         sprites[sprite_num]->insert_state(std::move(name), std::move(lst));
     };
 
+    void add_animation(const int& sprite_num, const std::string& name, const std::vector <std::pair <std::string, uint64_t>>& lst) {
+        sprites[sprite_num]->insert_state(std::move(name), std::move(lst));
+    };
+
     void set_animation(const int& sprite_num, const std::string& name) {
         sprites[sprite_num]->set_state(std::move(name));
     };

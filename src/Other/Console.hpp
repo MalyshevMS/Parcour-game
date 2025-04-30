@@ -4,10 +4,13 @@
 #include "../Variables/Client.hpp"
 #include <string>
 #include <iostream>
+#include <map>
 
 class Console {
 private:
     Client* client;
+    std::map <std::string, std::function<void()>> player_map;
+    std::map <std::pair<char, std::string>, std::function<void()>> other_map;
 public:
     Console(Client* client) {
         this->client = client;
@@ -20,10 +23,27 @@ public:
             p->current_anim = args.substr(args.rfind(",") + 1);
         }
 
+        if (command == "stop") {
+            p->current_anim = args;
+        }
+
         if (command == "block") {
             p->cur.x = stoi(args.substr(0, args.find(",")));
             p->cur.y = stoi(args.substr(args.find(",") + 1));
             client->placed_block = true;
+        }
+
+        auto it = player_map.find(command);
+        if (it != player_map.end()) {
+            it->second();
+        }
+    };
+
+    void bind(char signature, std::string name, std::function<void()> function) {
+        if (signature == '+') {
+            player_map.emplace(name, function);
+        } else {
+            other_map.emplace(std::pair<char, std::string>(), function);
         }
     };
 
@@ -45,6 +65,10 @@ public:
                 msg.erase(msg.begin());
                 this->echo(msg);
             } break;
+
+            default: {
+                
+            }
         }
     };
 };

@@ -1,0 +1,79 @@
+{
+    "textures": {
+        "atlas": [
+            {
+                "name": "Player",
+                "path": "res/textures/player.png",
+                "subtexs": [
+                    "stand_right", "stand_left", "walk1_right", "walk1_left", "walk2_right", "walk2_left", "jump_right", "jump_left"
+                ],
+                "size.x": 16, "size.y": 16
+            }
+        ]
+    },
+
+    "animations": [
+        {
+            "name": "mleft",
+            "playback": [
+                {
+                    "tex": "walk1_left",
+                    "duration": 100
+                },
+                {
+                    "tex": "walk2_left",
+                    "duration": 100
+                }
+            ]
+        },
+        {
+            "name": "mright",
+            "playback": [
+                {
+                    "tex": "walk1_right",
+                    "duration": 100
+                },
+                {
+                    "tex": "walk2_right",
+                    "duration": 100
+                }
+            ]
+        },
+        {
+            "name": "jleft",
+            "playback": [
+                {
+                    "tex": "jump_left",
+                    "duration": 700
+                }
+            ]
+        },
+        {
+            "name": "jright",
+            "playback": [
+                {
+                    "tex": "jump_right",
+                    "duration": 700
+                }
+            ]
+        },
+        {
+            "name": "stand_left",
+            "playback": [
+                {
+                    "tex": "stand_left",
+                    "duration": 1
+                }
+            ]
+        },
+        {
+            "name": "stand_right",
+            "playback": [
+                {
+                    "tex": "stand_right",
+                    "duration": 1
+                }
+            ]
+        }
+    ]
+}

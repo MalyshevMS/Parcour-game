@@ -28,6 +28,10 @@ namespace Renderer {
             states_map.emplace(std::move(state), std::vector <std::pair <std::string, uint64_t>>(subtex_duration));
         };
 
+        void insert_state(const std::string& state,  const std::vector <std::pair <std::string, uint64_t>>& subtex_duration) {
+            states_map.emplace(std::move(state), std::vector <std::pair <std::string, uint64_t>>(subtex_duration));
+        };
+
         void render() const override {
             if (dirty) {
                 auto subtex = _tex->get_subtex(anim_durations->second[current_frame].first);
