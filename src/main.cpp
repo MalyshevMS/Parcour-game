@@ -256,7 +256,7 @@ void cmdloop() {
     string com;
     Player* current_player = &pl;
     while (true) {
-        cout << "Parcour-game: ";
+        cout << gl.win_title + ": ";
         getline(cin, com);
 
         if (com == "exit" || com == "quit") exit(0);
@@ -372,8 +372,12 @@ int main(int argc, char const *argv[]) {
     gl.sprite_shader_vertex = _gl["sprite.shader.vertex"];
     gl.sprite_shader_fragment = _gl["sprite.shader.fragment"];
     gl.sprite_size = 80;
-    gl.font_height = _gl["font.height"];
     gl.font_width = _gl["font.width"];
+    gl.font_height = _gl["font.height"];
+    gl.win_size.x = _gl["window.width"];
+    gl.win_size.y = _gl["window.height"];
+    gl.win_title = _gl["window.title"];
+    gl.fullscreen = _gl["fullscreen"];
 
     auto _cam = file["Camera"];
     cam.x = pl.x - gl.win_size.x / 2;
@@ -426,9 +430,9 @@ int main(int argc, char const *argv[]) {
 
     GLFWwindow* window;
     if (gl.fullscreen) { // Creating window (fullscreen or windowed)
-        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, "ParCour game", glfwGetPrimaryMonitor(), nullptr);
+        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, gl.win_title.c_str(), glfwGetPrimaryMonitor(), nullptr);
     } else {
-        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, "ParCour game", nullptr, nullptr);
+        window = glfwCreateWindow(gl.win_size.x, gl.win_size.y, gl.win_title.c_str(), nullptr, nullptr);
     }
 
     if (!window) { // Checking for creating window

@@ -4,7 +4,11 @@
         "sprite.shader.vertex": "res/shaders/vSprite.cfg",
         "sprite.shader.fragment": "res/shaders/fSprite.cfg",
         "font.height": 40,
-        "font.width": 28
+        "font.width": 28,
+        "window.width": 1280,
+        "window.height": 720,
+        "window.title": "ParCour Game",
+        "fullscreen": false
     },
 
     "Client": {
