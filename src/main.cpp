@@ -50,6 +50,7 @@ TexLoader tl_main; // Main Texture loader
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
 SprGroup sg_bullets; // Group for bullets
 SprGroup sg_text; // Group for text rendering
+SprGroup sg_ui; // Group for UI
 SprGroup sg_pause; // Group for text while pauses
 SprGroup sg_buttons; // Group for buttons
 SprGroup sg_player; // Group for Player 1
@@ -439,6 +440,7 @@ int main(int argc, char const *argv[]) {
     cl.jump_height = _cl["jump.height"];
     cl.gravity = _cl["gravity"];
     cl.delay = _cl["delay"];
+    cl.bullet_speed = _cl["bullet.speed"];
 
     auto _pl = file["Player"];
     pl.x = _pl["spawn.x"];
@@ -448,6 +450,7 @@ int main(int argc, char const *argv[]) {
     pl.look = l_left;
     pl.current_anim = "stand_right";
     pl.noclip = _pl["noclip"];
+    pl.global_cd = _pl["bullet.cd"];
 
     string com;
 
@@ -508,6 +511,7 @@ int main(int argc, char const *argv[]) {
         sg_player = SprGroup(&rm_main);
         sg_player2 = SprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
+        sg_ui = SprGroup(&rm_main);
         sg_pause = SprGroup(&rm_main);
         sg_buttons = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites, &gl);
@@ -632,6 +636,10 @@ int main(int argc, char const *argv[]) {
                 prevent_clipping(); // Prevent player from clipping through walls
                 set_stand_anim();
             #endif
+
+            sg_ui.add_text("Font", string("shoot cd:") + to_string(pl.current_cd), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50);
+            sg_ui.add_text("Font", string("HP:") + to_string(100.0), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50 - gl.font_height);
+            sg_ui.add_text("Font", string("X:") + to_string(pl.x) + ",Y:" + to_string(pl.y), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50 - gl.font_height * 2);
             
             check_block_placement();
             check_bullets();
@@ -661,10 +669,13 @@ int main(int argc, char const *argv[]) {
             sg_player.render_all();
             sg_player2.render_all();
             sg_text.render_all();
+            sg_ui.render_all();
             sg_pause.render_all();
             sg_buttons.render_all();
 
             sg_buttons.set_pos(cam.x + 10, cam.y + 160);
+
+            sg_ui.delete_all();
             
             double cx, cy;
             glfwGetCursorPos(window, &cx, &cy);
@@ -682,6 +693,7 @@ int main(int argc, char const *argv[]) {
         sg_player.delete_all();
         sg_player2.delete_all();
         sg_text.delete_all();
+        sg_ui.delete_all();
         sg_pause.delete_all();
         sg_buttons.delete_all();
     }

@@ -13,6 +13,7 @@
 
     "Client": {
         "max_speed": 10,
+        "bullet.speed": 20,
         "jump.speed": 5,
         "jump.height": 160,
         "gravity": 9.80665,
@@ -21,7 +22,8 @@
 
     "Player": {
         "spawn.x": 0, "spawn.y": 80,
-        "noclip": false
+        "noclip": false,
+        "bullet.cd": 100
     },
 
     "Camera": {
