@@ -23,14 +23,14 @@ public:
             p->current_anim = args.substr(args.rfind(",") + 1);
         }
 
-        if (command == "stop") {
-            p->current_anim = args;
-        }
-
         if (command == "block") {
             p->cur.x = stoi(args.substr(0, args.find(",")));
             p->cur.y = stoi(args.substr(args.find(",") + 1));
             client->placed_block = true;
+        }
+
+        if (command == "shoot") {
+            client->shooted = true;
         }
 
         auto it = player_map.find(command);

@@ -1,5 +1,5 @@
 // #define debug
-// #define online
+#define online
 
 #include <glad/glad.h> // OpenGL libs
 #include <GLFW/glfw3.h>
@@ -48,6 +48,7 @@ ResourceManager rm_main; // Main Resource manager
 TexLoader tl_main; // Main Texture loader
 
 SprGroup sg_sprites; // Group for obstacles, walls, etc.
+SprGroup sg_bullets; // Group for bullets
 SprGroup sg_text; // Group for text rendering
 SprGroup sg_pause; // Group for text while pauses
 SprGroup sg_buttons; // Group for buttons
@@ -183,6 +184,38 @@ void fall() {
     }
 }
 
+void shoot(Player& p) {
+    if (!pl.bullet_cd) {
+        float ang;
+        if (p.look == l_left) {
+            ang = 90.f;
+        } else if (p.look == l_right) {
+            ang = -90.f;
+        }
+        sg_bullets.add_sprite("Bullet", "default", gl.sprite_shader, gl.sprite_size, gl.sprite_size, ang, p.x, p.y);
+        p.bullet_array.push_back(BPair(sg_bullets.get_sprites().size() - 1, p.look));
+        p.bullet_cd = true;
+        p.current_cd = p.global_cd;
+        p.msg = "+shoot:1";
+    }
+}
+
+void move_bullets(Player& p) {
+    for (auto i : p.bullet_array) {
+        int speed;
+        if (i.second == l_left) speed = -cl.bullet_speed;
+        else speed = cl.bullet_speed;
+        sg_bullets.move(i.first, sg_bullets.get_sprites()[i.first]->getPos().x + speed, sg_bullets.get_sprites()[i.first]->getPos().y);
+    }
+}
+
+void check_bullets() {
+    if (cl.shooted) {
+        shoot(pl2);
+        cl.shooted = false;
+    }
+}
+
 void detect_fail() {
 
 }
@@ -204,6 +237,14 @@ void set_stand_anim() {
             case l_left: { pl.current_anim = "stand_left"; break; }
             case l_right: { pl.current_anim = "stand_right"; break; }
         }
+    }
+}
+
+void look_update() {
+    if (pl2.current_anim == "mleft" || pl2.current_anim == "jleft" || pl2.current_anim == "stand_left") {
+        pl2.look = l_left;
+    } else if (pl2.current_anim == "mright" || pl2.current_anim == "jright" || pl2.current_anim == "stand_right") {
+        pl2.look = l_right;
     }
 }
 
@@ -292,7 +333,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
     if (key == KEY_ENTER && action == GLFW_PRESS) {
-
+        cout << pl2.look << endl;
     }
 }
 
@@ -322,6 +363,10 @@ void keyHandler(GLFWwindow* win) {
 
         if (glfwGetMouseButton(win, MOUSE_RIGHT)) {
             place_block(pl);
+        }
+
+        if (glfwGetMouseButton(win, MOUSE_LEFT)) {
+            shoot(pl);
         }
     } else {
         if (glfwGetMouseButton(win, MOUSE_LEFT)) {
@@ -459,6 +504,7 @@ int main(int argc, char const *argv[]) {
         rm_main = ResourceManager(argv[0]); // Binding all classes together
         tl_main = TexLoader(&rm_main);
         sg_sprites = SprGroup(&rm_main);
+        sg_bullets = SprGroup(&rm_main);
         sg_player = SprGroup(&rm_main);
         sg_player2 = SprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
@@ -588,6 +634,10 @@ int main(int argc, char const *argv[]) {
             #endif
             
             check_block_placement();
+            check_bullets();
+            look_update();
+            move_bullets(pl);
+            move_bullets(pl2);
 
             sg_player.rotate_all(180 - cam.rot); // Setting rotation (Player 1)
             sg_player.set_pos(pl.x, pl.y); // Setting position (Player 1)
@@ -602,8 +652,12 @@ int main(int argc, char const *argv[]) {
             sg_player.update_all();
             sg_player2.update_all();
 
+            pl.update();
+            pl2.update();
+
             // Rendering all sprites
             sg_sprites.render_all();
+            sg_bullets.render_all();
             sg_player.render_all();
             sg_player2.render_all();
             sg_text.render_all();
@@ -623,7 +677,8 @@ int main(int argc, char const *argv[]) {
         }
         
         // Deleting all sprites from all groups
-        sg_sprites.delete_all(); 
+        sg_sprites.delete_all();
+        sg_bullets.delete_all();
         sg_player.delete_all();
         sg_player2.delete_all();
         sg_text.delete_all();

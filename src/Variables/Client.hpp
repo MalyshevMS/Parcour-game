@@ -4,6 +4,7 @@
 
 struct Client {
     int max_speed = 10; // Max player movement speed
+    int bullet_speed = 5; // Bullet movement speed
     int jump_speed = 5; // Player(s) jump speed
     int jump_height = 160; // Max player jump height
     float gravity = 9.80665f; // Gravity value
@@ -11,6 +12,7 @@ struct Client {
     bool paused = true; // Is game paused
     bool in_game = false; // Is in game or in menu
     bool placed_block = false; // Is block placed
+    bool shooted = false; // Is the shot taken
     std::string ip; // Server IP
     unsigned short port; // Server port
     unsigned short delay; // delay between sending messages  
