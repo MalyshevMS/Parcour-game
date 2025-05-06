@@ -33,6 +33,10 @@ public:
             client->shooted = true;
         }
 
+        if (command == "round" && args == "lost") {
+            client->round_win = true;
+        }
+
         auto it = player_map.find(command);
         if (it != player_map.end()) {
             it->second();

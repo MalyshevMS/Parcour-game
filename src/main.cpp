@@ -52,6 +52,7 @@ SprGroup sg_bullets; // Group for bullets
 SprGroup sg_text; // Group for text rendering
 SprGroup sg_ui; // Group for UI
 SprGroup sg_pause; // Group for text while pauses
+SprGroup sg_result; // Group for round end message 
 SprGroup sg_buttons; // Group for buttons
 SprGroup sg_player; // Group for Player 1
 SprGroup sg_player2; // Group for Player 2
@@ -217,8 +218,62 @@ void check_bullets() {
     }
 }
 
-void detect_fail() {
+void detect_dmg() {
+    for (auto i : pl2.bullet_array) {
+        auto bullet_pos = sg_bullets.get_sprites()[i.first]->getPos();
+        auto bullet_show = sg_bullets.get_sprites()[i.first]->_render;
+        if (bullet_show) {
+            if (abs((pl.x + gl.sprite_size) - bullet_pos.x) <= 0 && abs(pl.y - bullet_pos.y) < gl.sprite_size) {
+                pl.hp -= cl.bullet_dmg / 2.f;
+                sg_bullets.hide(i.first);
+            }
 
+            if (pl.x - (bullet_pos.x + gl.sprite_size) <= 0 && pl.x - (bullet_pos.x + gl.sprite_size) > -2 * gl.sprite_size && abs(pl.y - bullet_pos.y) < gl.sprite_size) {
+                pl.hp -= cl.bullet_dmg / 2.f;
+                sg_bullets.hide(i.first);
+            }
+        }
+    }
+}
+
+void reset_map() {
+    pl.hp = pl.max_hp;
+    sg_bullets.delete_all();
+    sg_sprites.delete_all();
+    pars_main.parse_lvl(cl.level, &gl.sprite_size, false);
+    pl.bullet_array.clear();
+    pl2.bullet_array.clear();
+}
+
+void detect_fail(GLFWwindow* win) {
+    if (pl.hp <= 0.f) {
+        pl2.score++;
+        sg_ui.add_text("Font", "Round lost!", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x / 2 - 5 * gl.font_width, cam.y + gl.win_size.y / 2 - 50);
+        pl.msg = "+round:lost";
+        reset_map();
+        sg_ui.render_all();
+        glfwSwapBuffers(win);
+        sleep(1000);
+    }
+}
+
+void detect_round_win(GLFWwindow* win) {
+    if (cl.round_win) {
+        cl.round_win = false;
+        pl.score++;
+        sg_ui.add_text("Font", "Round won!", gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x / 2 - 5 * gl.font_width, cam.y + gl.win_size.y / 2 - 50);
+        reset_map();
+        sg_ui.render_all();
+        glfwSwapBuffers(win);
+        sleep(1000);
+    }
+}
+
+void show_tab() {
+    string pl_score = pl.name + ":" + to_string(pl.score);
+    string pl2_score = pl2.name + ":" + to_string(pl2.score);
+    sg_ui.add_text("Font", pl_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl_score.size() / 2, cam.y + gl.win_size.y - 50);
+    sg_ui.add_text("Font", pl2_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl2_score.size() / 2, cam.y + gl.win_size.y - 2 * gl.font_height);
 }
 
 /// @brief Displays pause text
@@ -334,7 +389,7 @@ void onceKeyHandler(GLFWwindow* win, int key, int scancode, int action, int mode
     } else if ((key == KEY_ESCAPE || key == KEY_PAUSE) && action == GLFW_RELEASE && !cl.paused) unpause();
 
     if (key == KEY_ENTER && action == GLFW_PRESS) {
-        cout << pl2.look << endl;
+        cout << "PL1: " << pl.score << " | PL2: " << pl2.score << endl;
     }
 }
 
@@ -441,6 +496,8 @@ int main(int argc, char const *argv[]) {
     cl.gravity = _cl["gravity"];
     cl.delay = _cl["delay"];
     cl.bullet_speed = _cl["bullet.speed"];
+    cl.bullet_dmg = _cl["bullet.dmg"];
+    cl.level = _cl["level"];
 
     auto _pl = file["Player"];
     pl.x = _pl["spawn.x"];
@@ -451,6 +508,7 @@ int main(int argc, char const *argv[]) {
     pl.current_anim = "stand_right";
     pl.noclip = _pl["noclip"];
     pl.global_cd = _pl["bullet.cd"];
+    pl.max_hp = _pl["hp.max"];
 
     string com;
 
@@ -512,6 +570,7 @@ int main(int argc, char const *argv[]) {
         sg_player2 = SprGroup(&rm_main);
         sg_text = SprGroup(&rm_main);
         sg_ui = SprGroup(&rm_main);
+        sg_result = SprGroup(&rm_main);
         sg_pause = SprGroup(&rm_main);
         sg_buttons = SprGroup(&rm_main);
         pars_main = Parser(&rm_main, &tl_main, &sg_sprites, &gl);
@@ -528,7 +587,7 @@ int main(int argc, char const *argv[]) {
         spriteShaderProgram->use();
         spriteShaderProgram->setInt("tex", 0);
 
-        pars_main.parse_lvl("res/lvl/level.json", &gl.sprite_size); // Parsing level
+        pars_main.parse_lvl(cl.level, &gl.sprite_size); // Parsing level
         pars_main.parse_player("player.json", &sg_player, glm::vec2(pl.x, pl.y));
 
         pl.current_anim = "stand_left";
@@ -566,6 +625,7 @@ int main(int argc, char const *argv[]) {
         kh_main.bind(KEY_RIGHT, [](){ cam.x += cam.speed; });
         kh_main.bind(KEY_LEFT, [](){ cam.x -= cam.speed; });
         kh_main.bind(KEY_F1, [](){ cam.x = pl.x - gl.win_size.x / 2; cam.y = pl.y - gl.sprite_size; });
+        kh_main.bind(KEY_TAB, show_tab);
 
         sg_player.set_timer();
         sg_player2.set_timer();
@@ -638,12 +698,15 @@ int main(int argc, char const *argv[]) {
             #endif
 
             sg_ui.add_text("Font", string("shoot cd:") + to_string(pl.current_cd), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50);
-            sg_ui.add_text("Font", string("HP:") + to_string(100.0), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50 - gl.font_height);
+            sg_ui.add_text("Font", string("HP:") + to_string(pl.hp), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50 - gl.font_height);
             sg_ui.add_text("Font", string("X:") + to_string(pl.x) + ",Y:" + to_string(pl.y), gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + 30, cam.y + gl.win_size.y - 50 - gl.font_height * 2);
             
             check_block_placement();
             check_bullets();
             look_update();
+            detect_dmg();
+            detect_fail(window);
+            detect_round_win(window);
             move_bullets(pl);
             move_bullets(pl2);
 
@@ -694,6 +757,7 @@ int main(int argc, char const *argv[]) {
         sg_player2.delete_all();
         sg_text.delete_all();
         sg_ui.delete_all();
+        sg_result.delete_all();
         sg_pause.delete_all();
         sg_buttons.delete_all();
     }

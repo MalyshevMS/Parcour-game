@@ -14,6 +14,7 @@ struct Player {
     int look = l_left; // Player looking direction
     int current_cd = 0; // Player current bullet cooldown
     int global_cd = 100; // Player bullet cooldown
+    int score = 0;
     std::string current_anim = ""; // Player current animation
     std::string name = ""; // Player nickname
     std::string msg = ""; // Player current message
@@ -23,6 +24,8 @@ struct Player {
     bool jumping = false; // Player jumping flag
     bool noclip = false; // Player no clipping flag
     bool bullet_cd = false; // Player bullet cooldown flag
+    float hp = 100.f; // Player HP
+    float max_hp = 100.f; // Player maximum HP
 
     void update() {
         if (bullet_cd) current_cd--;

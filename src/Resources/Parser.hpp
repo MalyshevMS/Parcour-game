@@ -29,12 +29,6 @@ public:
         this->gl = gl;
     };
 
-    void parse_conf(const std::string& path) {
-        json file = get_json(std::move(path));
-
-
-    }
-
     void parse_player(std::string path, SprGroup* sg_p, const glm::vec2& spawn_pos) {
         json file = get_json(std::move(path));
 
@@ -56,21 +50,23 @@ public:
         }
     }
 
-    void parse_lvl(std::string path, int* spr_size) {
+    void parse_lvl(std::string path, int* spr_size, bool parse_textures = true) {
         json file = get_json(std::move(path));
 
         *spr_size = file["sprite.size"];
         
-        std::vector <json> tex_arr = file["textures"]["array"];
-        for (auto i : tex_arr) {
-            std::string _name = i["name"];
-            std::string _path = i["path"];
-            tx->add_texture(_name, _path);
-        }
+        if (parse_textures) {
+            std::vector <json> tex_arr = file["textures"]["array"];
+            for (auto i : tex_arr) {
+                std::string _name = i["name"];
+                std::string _path = i["path"];
+                tx->add_texture(_name, _path);
+            }
 
-        std::vector <json> atl_arr = file["textures"]["atlas"];
-        for (auto i : atl_arr) {
-            tx->add_textures_from_atlas(i["name"], i["path"], i["subtexs"], glm::vec2(i["size.x"], i["size.y"]));
+            std::vector <json> atl_arr = file["textures"]["atlas"];
+            for (auto i : atl_arr) {
+                tx->add_textures_from_atlas(i["name"], i["path"], i["subtexs"], glm::vec2(i["size.x"], i["size.y"]));
+            }
         }
 
         std::vector <json> lvl = file["level"];

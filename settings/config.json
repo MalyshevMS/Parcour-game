@@ -14,16 +14,19 @@
     "Client": {
         "max_speed": 10,
         "bullet.speed": 20,
+        "bullet.dmg": 30.0,
         "jump.speed": 5,
         "jump.height": 160,
         "gravity": 9.80665,
-        "delay": 10
+        "delay": 10,
+        "level": "res/lvl/level.json"
     },
 
     "Player": {
         "spawn.x": 0, "spawn.y": 80,
         "noclip": false,
-        "bullet.cd": 100
+        "bullet.cd": 100,
+        "hp.max": 100.0
     },
 
     "Camera": {
