@@ -272,8 +272,8 @@ void detect_round_win(GLFWwindow* win) {
 void show_tab() {
     string pl_score = pl.name + ":" + to_string(pl.score);
     string pl2_score = pl2.name + ":" + to_string(pl2.score);
-    sg_ui.add_text("Font", pl_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl_score.size() / 2, cam.y + gl.win_size.y - 50);
-    sg_ui.add_text("Font", pl2_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl2_score.size() / 2, cam.y + gl.win_size.y - 2 * gl.font_height);
+    sg_ui.add_text("Font", pl_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl_score.size() * gl.font_width, cam.y + gl.win_size.y - 50);
+    sg_ui.add_text("Font", pl2_score, gl.sprite_shader, gl.font_width, gl.font_height, 0.f, cam.x + gl.win_size.x - 150 - pl2_score.size() * gl.font_width, cam.y + gl.win_size.y - 2 * gl.font_height);
 }
 
 /// @brief Displays pause text
