@@ -1,10 +1,10 @@
-# ParCour game
+# Combat Builders
  - [My github](https://github.com/MalyshevMS)
  - [How to run it?](#how-to-run-it)
  - [Connect to a server](#connect-to-a-server)
  - [Latest release](https://github.com/MalyshevMS/Parcour-game/releases/tag/v1.0.0)
 
-This is a simply minimalistic 2D game about parkour.
+This is a simply minimalistic 2D game about fighting and building.
 
 ### WARNING
 Project is on develop stage! Running it on your PC is only **YOUR** responsibility!\

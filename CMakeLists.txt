@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
-set(project_name_ Parcour-game)
+set(project_name_ Combat-Builders)
 
 project(${project_name_})
 
